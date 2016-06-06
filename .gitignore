@@ -1,0 +1,12 @@
+bin
+obj
+*.user
+*.suo
+packages
+.tools
+
+# todo: check this folders
+ipch
+Win32
+*.sdf
+*.opensdf

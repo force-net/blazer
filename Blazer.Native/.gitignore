@@ -1,0 +1,6 @@
+# todo remove this folders from config
+Debug
+Release
+Win32
+Win32Debug
+x64
