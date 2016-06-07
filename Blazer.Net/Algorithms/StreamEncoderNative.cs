@@ -6,7 +6,7 @@ namespace Force.Blazer.Algorithms
 	public class StreamEncoderNative : StreamEncoder
 	{
 		[DllImport(@"Blazer.Native.dll", CallingConvention = CallingConvention.Cdecl)]
-		private static extern int blazer_v1_compress_block(
+		private static extern int blazer_stream_compress_block(
 			IntPtr bufferIn, int bufferInOffset, int bufferInLength, int globalOffset, IntPtr bufferOut, int bufferOutOffset, IntPtr hashArr);
 
 		private GCHandle _bufferInHandle;
@@ -30,7 +30,7 @@ namespace Force.Blazer.Algorithms
 			int bufferOutOffset,
 			int[] hashArr)
 		{
-			return blazer_v1_compress_block(
+			return blazer_stream_compress_block(
 				_bufferInHandle.AddrOfPinnedObject(),
 				bufferInOffset,
 				bufferInLength,

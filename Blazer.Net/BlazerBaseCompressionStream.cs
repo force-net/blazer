@@ -120,7 +120,7 @@ namespace Force.Blazer
 							{
 								(byte)'B', (byte)'L', (byte)'Z',
 								0x00, // version of file structure
-								(byte)((((uint)flags) & 0xff) | _encoderAlgorithmId << 4),
+								(byte)((((uint)flags) & 0xff) | ((uint)_encoderAlgorithmId << 4)),
 								(byte)(((uint)flags >> 8) & 0xff),
 								(byte)(((uint)flags >> 16) & 0xff),
 								(byte)(((uint)flags >> 24) & 0xff)

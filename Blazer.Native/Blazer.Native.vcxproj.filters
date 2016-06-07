@@ -38,10 +38,10 @@
     <ClCompile Include="crc32c.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlazerV2.cpp">
+    <ClCompile Include="BlazerStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlazerV1.cpp">
+    <ClCompile Include="BlazerBlock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

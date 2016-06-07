@@ -49,7 +49,6 @@ namespace Force.Blazer.Algorithms
 			if (_bufferInPos == 0) return;
 
 			var cnt = CompressBlock(_bufferIn, 0, _bufferInPos, _bufferOut, _bufferOutHeaderSize);
-
 			if (cnt >= _bufferInPos)
 			{
 				Buffer.BlockCopy(_bufferIn, 0, _bufferOut, _bufferOutHeaderSize, _bufferInPos);
@@ -98,17 +97,29 @@ namespace Force.Blazer.Algorithms
 				var hashVal = hashArr[hashKey];
 				hashArr[hashKey] = idxInP3;
 				var backRef = idxInP3 - hashVal;
-				if (hashVal > 0 && /*backRef < MAX_BACK_REF && */hashKey != 65535)
+				var isBig = backRef < 257 ? 0 : 1;
+				if (hashVal > 0 && hashKey != 65535)
 				{
-					if ((/*idxIn != lastProcessedIdxIn ||*/ backRef < 257 || bufferIn[hashVal + 1] == bufferIn[idxIn + 4])
+					if ((isBig == 0 || bufferIn[hashVal + 1] == bufferIn[idxIn + 4])
 						&& mulEl == (uint)((bufferIn[hashVal - 3] << 24) | (bufferIn[hashVal - 2] << 16) | (bufferIn[hashVal - 1] << 8) | bufferIn[hashVal]))
 					{
 						var origIdxIn = idxIn;
 						hashVal += 4 - 3;
 						idxIn += 4;
 
-						while (idxIn < bufferInLength)
+						while (true)
 						{
+							if (idxIn >= iterMax)
+							{
+								while (idxIn < bufferInLength && bufferIn[hashVal] == bufferIn[idxIn])
+								{
+									hashVal++;
+									idxIn++;
+								}
+
+								break;
+							}
+
 							elemP0 = bufferIn[idxIn];
 							mulEl = (mulEl << 8) | elemP0;
 							hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn;
@@ -118,29 +129,25 @@ namespace Force.Blazer.Algorithms
 								hashVal++;
 								idxIn++;
 							}
-							else break;
+							else
+							{
+								mulEl = (mulEl << 8) | bufferIn[idxIn + 1];
+								hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 1;
+								mulEl = (mulEl << 8) | bufferIn[idxIn + 2];
+								hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 2;
+								break;
+							}
 						}
 
-						#region Write Hash
-
-						if (idxIn < iterMax)
-						{
-							mulEl = (mulEl << 8) | bufferIn[idxIn + 1];
-							hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 1;
-							mulEl = (mulEl << 8) | bufferIn[idxIn + 2];
-							hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 2;
-						}
-
-						#endregion
-
-						int seqLen = idxIn - origIdxIn - MIN_SEQ_LEN;
+						int seqLen = idxIn - origIdxIn - MIN_SEQ_LEN - isBig;
 						cntLit = origIdxIn - lastProcessedIdxIn;
 
 						#region Write Back Ref
-
 						if (backRef >= 256 + 1)
 						{
 							bufferOut[idxOut++] = (byte)(((Math.Min(cntLit, 7) << 4) | Math.Min(seqLen, 15)) | 128);
+							if (bufferOut[idxOut - 1] == 0xff && idxOut >= 2000000)
+								Console.WriteLine(idxOut - 1);
 
 							bufferOut[idxOut++] = (byte)hashKey;
 							bufferOut[idxOut++] = (byte)(hashKey >> 8);
@@ -256,8 +263,8 @@ namespace Force.Blazer.Algorithms
 					if (c < 253) bufferOut[idxOut++] = (byte)c;
 					else if (c < 253 + 256)
 					{
-						bufferOut[idxOut++] = (byte)(c - 253);
 						bufferOut[idxOut++] = 253;
+						bufferOut[idxOut++] = (byte)(c - 253);
 					}
 					else if (c < 253 + (256 * 256))
 					{

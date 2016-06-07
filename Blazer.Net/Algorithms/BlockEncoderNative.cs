@@ -6,7 +6,7 @@ namespace Force.Blazer.Algorithms
 	public class BlockEncoderNative : BlockEncoder
 	{
 		[DllImport(@"Blazer.Native.dll", CallingConvention = CallingConvention.Cdecl)]
-		private static extern int blazer_v2_compress_block(
+		private static extern int blazer_block_compress_block(
 			IntPtr bufferIn, int bufferInOffset, int bufferInLength, IntPtr bufferOut, int bufferOutOffset);
 
 		private GCHandle _bufferInHandle;
@@ -26,7 +26,7 @@ namespace Force.Blazer.Algorithms
 			byte[] bufferOut,
 			int bufferOutOffset)
 		{
-			return blazer_v2_compress_block(
+			return blazer_block_compress_block(
 				_bufferInHandle.AddrOfPinnedObject(),
 				bufferInOffset,
 				bufferInCount,

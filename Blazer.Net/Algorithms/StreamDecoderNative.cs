@@ -6,7 +6,7 @@ namespace Force.Blazer.Algorithms
 	public class StreamDecoderNative : StreamDecoder
 	{
 		[DllImport(@"Blazer.Native.dll", CallingConvention = CallingConvention.Cdecl)]
-		private static extern int blazer_v1_decompress_block(
+		private static extern int blazer_stream_decompress_block(
 			IntPtr bufferIn, int bufferInOffset, int bufferInLength, IntPtr bufferOut, int bufferOutOffset, int bufferOutLength);
 
 		private GCHandle _bufferIn;
@@ -24,7 +24,7 @@ namespace Force.Blazer.Algorithms
 				_bufferOut = GCHandle.Alloc(bufferOut, GCHandleType.Pinned);
 			}
 
-			return blazer_v1_decompress_block(
+			return blazer_stream_decompress_block(
 				_bufferIn.AddrOfPinnedObject(), 0, bufferInLength, _bufferOut.AddrOfPinnedObject(), idxOut, bufferOutLength);
 		}
 

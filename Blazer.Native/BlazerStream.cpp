@@ -1,18 +1,17 @@
 #include "stdafx.h"
-#include <windows.h>
 
-// #define Mul 0x736AE249u
-#define Mul  1527631329
-#define HASH_TABLE_BITS 16
+#define HASH_TABLE_BITS  16
+#define HASH_TABLE_LEN  ((1 << HASH_TABLE_BITS) - 1)
+#define MAX_BACK_REF  ((1 << 16) + 256)
+#define MIN_SEQ_LEN  4
+// #define MUL  0x0C5AE896A
 
-#define HASH_TABLE_BITS 16
-#define HASH_TABLE_LEN ((1 << HASH_TABLE_BITS) - 1)
-
-#define MIN_SEQ_LEN 4;
+// carefully selected random number
+#define MUL 1527631329
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-static inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst, __int32 count)
+inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst, __int32 count)
 {
 	/*while (count > 0 && ((int)src & 7) != 0)
 	{
@@ -36,49 +35,56 @@ static inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst,
 	return dst;
 }
 
-extern "C" __declspec(dllexport) __int32 blazer_v2_compress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset)
+extern "C" __declspec(dllexport) __int32 blazer_stream_compress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, __int32 bufferInShift, unsigned char* bufferOut, __int32 bufferOutOffset, __int32* hashArr)
 {
-	HANDLE hHeap = GetProcessHeap();
-	// int hashArr[HASH_TABLE_LEN + 1];
-	__int32* hashArr = (__int32*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(__int32) * (HASH_TABLE_LEN + 1));
-	int idxIn = bufferInOffset;
-	int lastProcessedIdxIn = idxIn;
-	int idxOut = bufferOutOffset;
-
 	int cntLit;
 
-	int iterMax = bufferInLength - 4;
+	unsigned __int32 mulEl = 0;
 
 	unsigned char* bufferOutOrig = bufferOut;
 	bufferOut += bufferOutOffset;
 
-	unsigned __int32 mulEl = 0;
+	int iterMax = bufferInLength - 1;
 
-	if (bufferInLength > 3)
-		mulEl = (unsigned __int32)(bufferIn[0] << 16 | bufferIn[1] << 8 | bufferIn[2]);
+	int idxIn = bufferInOffset;
+	int lastProcessedIdxIn = idxIn + 3;
+	int globalOfs = bufferInShift;
+	if (bufferInLength - idxIn > 3)
+	{
+		mulEl = (unsigned __int32)(bufferIn[idxIn] << 16 | bufferIn[idxIn+1] << 8 | bufferIn[idxIn+2]);
+		idxIn += 3;
+	}
+	else
+	{
+		idxIn = bufferInLength;
+	}
 
 	while (idxIn < iterMax)
 	{
-		__int32 idxInP3 = idxIn + 3;
-		unsigned char elemP0 = bufferIn[idxInP3];
+		unsigned char elemP0 = bufferIn[idxIn];
 
 		mulEl = (mulEl << 8) | elemP0;
-		unsigned __int16 hashKey = (mulEl  * Mul) >> (32 - HASH_TABLE_BITS);
-		__int32 hashVal = hashArr[hashKey];
-		hashArr[hashKey] = idxInP3;
-		int backRef = idxInP3 - hashVal;
-		if (hashVal > 0 /*&& backRef < MAX_BACK_REF*/ && hashKey != 65535 && ((/*idxIn != lastProcessedIdxIn ||*/ backRef < 257 || bufferIn[hashVal + 1] == bufferIn[idxIn + 4])
-				&& mulEl == (unsigned __int32)((bufferIn[hashVal - 3] << 24) | (bufferIn[hashVal - 2] << 16) | (bufferIn[hashVal - 1] << 8) | bufferIn[hashVal])))
+		unsigned __int32 hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
+		int hashVal = hashArr[hashKey] - globalOfs;
+		hashArr[hashKey] = idxIn + globalOfs;
+		int backRef = idxIn - hashVal;
+		int isBig = backRef < 257 ? 0 : 1;
+		if (hashVal > 0
+			&& backRef < MAX_BACK_REF
+			&& ((!isBig || bufferIn[hashVal + 1] == bufferIn[idxIn + 1])
+				&& mulEl == (unsigned __int32)((bufferIn[hashVal - 3] << 24) | (bufferIn[hashVal - 2] << 16) | (bufferIn[hashVal - 1] << 8) | bufferIn[hashVal - 0])))
 		{
-			int origIdxIn = idxIn;
-			hashVal += 4 - 3;
-			idxIn += 4;
+			cntLit = idxIn - lastProcessedIdxIn;
+
+			hashVal++;
+			idxIn++;
 
 			while (idxIn < bufferInLength)
 			{
 				elemP0 = bufferIn[idxIn];
 				mulEl = (mulEl << 8) | elemP0;
-				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn;
+				hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
+				hashArr[hashKey] = idxIn + globalOfs;
 
 				if (bufferIn[hashVal] == elemP0)
 				{
@@ -88,22 +94,14 @@ extern "C" __declspec(dllexport) __int32 blazer_v2_compress_block(unsigned char*
 				else break;
 			}
 
-			if (idxIn < iterMax)
-			{
-				mulEl = (mulEl << 8) | bufferIn[idxIn + 1];
-				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 1;
-				mulEl = (mulEl << 8) | bufferIn[idxIn + 2];
-				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 2;
-			}
-
-			int seqLen = idxIn - origIdxIn - MIN_SEQ_LEN;
-			cntLit = origIdxIn - lastProcessedIdxIn;
+			int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3 - isBig;
 
 			if (backRef >= 256 + 1)
 			{
-				*(bufferOut++) = (unsigned char)(((MIN(cntLit, 7) << 4) | MIN(seqLen, 15)) | 128);
+				backRef -= 256 + 1;
+				*(bufferOut++) = (unsigned char)(((MIN(cntLit, 7) << 4) | MIN(seqLen, 15)) + 128);
 
-				*((unsigned __int16*)bufferOut) = hashKey;
+				*((unsigned __int16*)bufferOut) = backRef;
 				bufferOut += 2;
 			}
 			else
@@ -113,7 +111,6 @@ extern "C" __declspec(dllexport) __int32 blazer_v2_compress_block(unsigned char*
 				// 1 is always min, should not write it
 				*(bufferOut++) = (unsigned char)(backRef - 1);
 			}
-
 
 			if (cntLit >= 7)
 			{
@@ -165,16 +162,29 @@ extern "C" __declspec(dllexport) __int32 blazer_v2_compress_block(unsigned char*
 				}
 			}
 
-			bufferOut = copy_memory(bufferIn + origIdxIn - cntLit, bufferOut, cntLit);
-			
+			bufferOut = copy_memory(bufferIn + lastProcessedIdxIn - 3, bufferOut, cntLit);
+
+			idxIn += 3;
 			lastProcessedIdxIn = idxIn;
+
+			if (idxIn < bufferInLength)
+			{
+				mulEl = (mulEl << 8) | bufferIn[idxIn - 2];
+				hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
+				hashArr[hashKey] = idxIn - 2 + globalOfs;
+
+				mulEl = (mulEl << 8) | bufferIn[idxIn - 1];
+				hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
+				hashArr[hashKey] = idxIn - 1 + globalOfs;
+			}
+
 			continue;
 		}
 
 		idxIn++;
 	}
 
-	cntLit = bufferInLength - lastProcessedIdxIn;
+	cntLit = bufferInLength - lastProcessedIdxIn + 3;
 	idxIn = bufferInLength;
 
 	if (cntLit > 0)
@@ -189,8 +199,8 @@ extern "C" __declspec(dllexport) __int32 blazer_v2_compress_block(unsigned char*
 			if (c < 253) *(bufferOut++) = (unsigned char)c;
 			else if (c < 253 + 256)
 			{
-				*(bufferOut++) = (unsigned char)(c - 253);
 				*(bufferOut++) = 253;
+				*(bufferOut++) = (unsigned char)(c - 253);
 			}
 			else if (c < 253 + (256 * 256))
 			{
@@ -215,49 +225,49 @@ extern "C" __declspec(dllexport) __int32 blazer_v2_compress_block(unsigned char*
 		}
 	}
 
-	HeapFree(hHeap, 0, hashArr);
 	return (__int32)(bufferOut - bufferOutOrig);
 }
 
-extern "C" __declspec(dllexport) __int32 blazer_v2_decompress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset, __int32 bufferOutLength)
+extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset, __int32 bufferOutLength)
 {
-	HANDLE hHeap = GetProcessHeap();
-	// int hashArr[HASH_TABLE_LEN + 1];
-	__int32* hashArr = (__int32*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(__int32) * (HASH_TABLE_LEN + 1));
-
-	unsigned char* bufferInEnd = bufferIn + bufferInLength;
-	// __int32 idxIn = bufferInOffset;
 	bufferIn += bufferInOffset;
-	int idxOut = bufferOutOffset;
-	unsigned __int32 mulEl = 0;
+	unsigned char* bufferInEnd = bufferIn + bufferInLength;
+
+	unsigned char* bufferOutOrig = bufferOut;
+	unsigned char* bufferOutEnd = bufferOut + bufferOutLength;
+	bufferOut += bufferOutOffset;
 
 	while (bufferIn < bufferInEnd)
 	{
 		unsigned char elem = *(bufferIn++);
 
-		int litCnt = (elem >> 4) & 7;
-		int litCntOrig = litCnt;
-		int seqCnt = (elem & 0xf) + 4;
-		int backRef = 0;
-		int hashIdx = -1;
+		int seqCntFirst = elem & 0xf;
+		int litCntFirst = (elem >> 4) & 7;
 
-		if (elem >> 7 != 0)
+		int litCnt = litCntFirst;
+		int seqCnt;
+		int backRef;
+
+		if (elem >= 128)
 		{
-			hashIdx = *(unsigned __int16*)(bufferIn);
+			backRef = *(unsigned __int16*)(bufferIn) + 257;
+			seqCnt = seqCntFirst + 5;
 			bufferIn += 2;
-			if (hashIdx == 0xffff)
+			if (backRef == 0xffff + 257)
 			{
 				seqCnt = 0;
+				seqCntFirst = 0;
 				litCnt = elem - 128;
-				litCntOrig = litCnt == 127 ? 7 : 0;
+				litCntFirst = litCnt == 127 ? 7 : 0;
 			}
 		}
 		else
 		{
 			backRef = *(bufferIn++) + 1;
+			seqCnt = seqCntFirst + 4;
 		}
 
-		if (litCntOrig == 7)
+		if (litCntFirst == 7)
 		{
 			unsigned char litCntR = *(bufferIn++);
 			
@@ -276,7 +286,7 @@ extern "C" __declspec(dllexport) __int32 blazer_v2_decompress_block(unsigned cha
 			}
 		}
 
-		if (seqCnt == 15 + 4)
+		if (seqCntFirst == 15)
 		{
 			unsigned char seqCntR = *(bufferIn++);
 			if (seqCntR < 253) seqCnt += seqCntR;
@@ -294,31 +304,29 @@ extern "C" __declspec(dllexport) __int32 blazer_v2_decompress_block(unsigned cha
 			}
 		}
 
-		// TODO: check upper limit
-		int maxOutLength = idxOut + litCnt + seqCnt;
-		if (maxOutLength > bufferOutLength)
+		unsigned char* maxOutLength = bufferOut + litCnt + seqCnt;
+		if (maxOutLength >= bufferOutEnd)
 		{
 			return -1;
+			// throw new IndexOutOfRangeException("Invalid stream structure");
 		}
 
-		while (--litCnt >= 0)
-		{
-			unsigned char v = *(bufferIn++);
-			mulEl = (mulEl << 8) | v;
-			hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxOut;
-			bufferOut[idxOut++] = v;
-		}
+		bufferOut = copy_memory(bufferIn, bufferOut, litCnt);
+		bufferIn += litCnt;
 
-		int inRepIdx = hashIdx >= 0 ? hashArr[hashIdx] - 3 : idxOut - backRef;
-		while (--seqCnt >= 0)
+		if (backRef >= seqCnt && seqCnt > 8)
 		{
-			unsigned char v = bufferOut[inRepIdx++];
-			mulEl = (mulEl << 8) | v;
-			hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxOut;
-			bufferOut[idxOut++] = v;
+			bufferOut = copy_memory(bufferOut - backRef, bufferOut, seqCnt);
+		}
+		else
+		{
+			while (--seqCnt >= 0)
+			{
+				*(bufferOut) = *(bufferOut - backRef);
+				bufferOut++;
+			}
 		}
 	}
 
-	HeapFree(hHeap, 0, hashArr);
-	return idxOut;
+	return (__int32)(bufferOut - bufferOutOrig);
 }

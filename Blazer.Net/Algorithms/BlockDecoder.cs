@@ -66,35 +66,35 @@ namespace Force.Blazer.Algorithms
 
 			while (idxIn < bufferInLength)
 			{
-				var elem = bufferIn[idxIn];
+				var elem = bufferIn[idxIn++];
 
-				// if (idxOut >= 389874 - 800 && idxOut <= 389874)
-				//	Console.WriteLine(idxOut);
+				var seqCntFirst = elem & 0xf;
+				var litCntFirst = (elem >> 4) & 7;
 
-				var litCnt = (elem >> 4) & 7;
-				var litCntOrig = litCnt;
-				var seqCnt = (elem & 0xf) + MIN_SEQ_LEN;
+				var litCnt = litCntFirst;
+				int seqCnt;
 				var backRef = 0;
 				var hashIdx = -1;
 
 				if (elem >= 128)
 				{
-					hashIdx = bufferIn[idxIn + 1] | (bufferIn[idxIn + 2] << 8);
-					idxIn += 3;
+					hashIdx = bufferIn[idxIn++] | (bufferIn[idxIn++] << 8);
+					seqCnt = seqCntFirst + MIN_SEQ_LEN + 1;
 					if (hashIdx == 0xffff)
 					{
 						seqCnt = 0;
+						seqCntFirst = 0;
 						litCnt = elem - 128;
-						litCntOrig = litCnt == 127 ? 7 : 0;
+						litCntFirst = litCnt == 127 ? 7 : 0;
 					}
 				}
 				else
 				{
-					backRef = bufferIn[idxIn + 1] + 1;
-					idxIn += 2;
+					backRef = bufferIn[idxIn++] + 1;
+					seqCnt = seqCntFirst + MIN_SEQ_LEN;
 				}
 
-				if (litCntOrig == 7)
+				if (litCntFirst == 7)
 				{
 					var litCntR = bufferIn[idxIn++];
 					if (litCntR < 253) litCnt += litCntR;
@@ -106,7 +106,7 @@ namespace Force.Blazer.Algorithms
 						litCnt += 253 + (256 * 256) + bufferIn[idxIn++] + (bufferIn[idxIn++] << 8) + (bufferIn[idxIn++] << 16) + (bufferIn[idxIn++] << 24);
 				}
 
-				if (seqCnt == 15 + 4)
+				if (seqCntFirst == 15)
 				{
 					var seqCntR = bufferIn[idxIn++];
 					if (seqCntR < 253) seqCnt += seqCntR;

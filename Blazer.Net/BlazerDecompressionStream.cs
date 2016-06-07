@@ -145,7 +145,7 @@ namespace Force.Blazer
 				throw new InvalidOperationException("This is not blazer archive");
 			if (buf[3] != 0x00)
 				throw new InvalidOperationException("Stream is created in new version of archiver. Please, update library.");
-			BlazerFlags flags = (BlazerFlags)(buf[4] | (buf[5] << 8) | (buf[6] << 16) | ((uint)buf[7] << 24));
+			BlazerFlags flags = (BlazerFlags)(buf[4] | ((uint)buf[5] << 8) | ((uint)buf[6] << 16) | ((uint)buf[7] << 24));
 
 			_decoder = EncoderDecoderFactory.GetDecoder((BlazerAlgorithm)((((uint)flags) >> 4) & 15));
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);

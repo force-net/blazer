@@ -168,8 +168,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Blazer.cpp" />
-    <ClCompile Include="BlazerV2.cpp" />
-    <ClCompile Include="BlazerV1.cpp" />
+    <ClCompile Include="BlazerBlock.cpp" />
+    <ClCompile Include="BlazerStream.cpp" />
     <ClCompile Include="crc32c.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
