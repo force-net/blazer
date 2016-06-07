@@ -181,8 +181,6 @@ namespace Force.Blazer
 			// end of stream
 			if (!EnsureRead(_sizeBlock, 0, 4)) return false;
 			
-			// if (_sizeBlock[0] != 0x42)
-			//	throw new InvalidOperationException("Invalid header");
 			_encodingType = _sizeBlock[0];
 			
 			// empty footer

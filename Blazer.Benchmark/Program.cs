@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 
 using Force.Blazer.Algorithms.Crc32C;
 using Force.Blazer.Native;
+
+using LZ4;
+
+using Snappy;
 
 namespace Force.Blazer.Benchmark
 {
@@ -14,8 +19,9 @@ namespace Force.Blazer.Benchmark
 		{
 			BenchCrc32C();
 			BenchNoCompression();
-			BenchFile("AdventureWorks (high compressible db)", @"..\..\..\TestFiles\AdventureWorks2012_Data.mdf");
-			BenchFile("enwiki8 (big text document)", @"..\..\..\TestFiles\enwik8");
+			// BenchFile("AdventureWorks (high compressible db)", @"..\..\..\TestFiles\AdventureWorks2012_Data.mdf");
+			// BenchFile("enwiki8 (big text document)", @"..\..\..\TestFiles\enwik8");
+			BenchSilesia();
 		}
 
 	    private static void BenchCrc32C()
@@ -61,6 +67,19 @@ namespace Force.Blazer.Benchmark
 			BenchData(title, array);
 		}
 
+		private static void BenchSilesia()
+		{
+			const string SilesiaPAth = @"..\..\..\TestFiles\Silesia";
+			if (Directory.Exists(SilesiaPAth))
+			{
+				foreach (var fileName in Directory.GetFiles(SilesiaPAth))
+				{
+					var array = File.ReadAllBytes(fileName);
+					BenchData(Path.GetFileName(fileName), array);
+				}
+			}
+		}
+
 		private static void BenchData(string title, byte[] array)
 		{
 			Console.WriteLine();
@@ -76,6 +95,10 @@ namespace Force.Blazer.Benchmark
 			DoBench("Block/S ", array, x => new BlazerBlockCompressionStream(x), x => new BlazerDecompressionStream(x));
 			NativeHelper.SetNativeImplementation(true);
 			DoBench("Block/N ", array, x => new BlazerBlockCompressionStream(x), x => new BlazerDecompressionStream(x));
+
+			DoBench("LZ4     ", array, x => new LZ4Stream(x, LZ4StreamMode.Compress), x => new LZ4Stream(x, LZ4StreamMode.Decompress));
+			DoBench("Snappy  ", array, x => new SnappyStream(x, CompressionMode.Compress), x => new SnappyStream(x, CompressionMode.Decompress));
+			DoBench("StdGZip ", array, x => new GZipStream(x, CompressionMode.Compress), x => new GZipStream(x, CompressionMode.Decompress));
 		}
 
 		private static void DoBench(string title, byte[] data, Func<Stream, Stream> createCompressionStream, Func<Stream, Stream> createDecompressionStream)
@@ -97,11 +120,12 @@ namespace Force.Blazer.Benchmark
 			if (!data.SequenceEqual(resArray))
 				Console.WriteLine("Data Integrity failed for " + title);
 			Console.WriteLine(
-				"{0}\t{1:0.000} MB/s\t{2:0.000} MB/s\t{3:0.000}%",
+				"{0}\t{1,4:0} MB/s\t{2,4:0} MB/s\t{3,7:0.000}%\t{4:0.000}",
 				title,
 				data.Length / (compressionTime / 1000.0) / 1048576,
-				comprArray.Length / (decompressionTime / 1000.0) / 1048576,
-				100.0 * comprArray.Length / data.Length);
+				data.Length / (decompressionTime / 1000.0) / 1048576,
+				100.0 * comprArray.Length / data.Length,
+				1.0 * data.Length / comprArray.Length);
 		}
     }
 }
