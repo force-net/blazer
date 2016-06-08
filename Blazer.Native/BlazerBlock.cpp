@@ -63,60 +63,38 @@ extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned ch
 		unsigned char elemP0 = bufferIn[idxInP3];
 
 		mulEl = (mulEl << 8) | elemP0;
-		unsigned __int16 hashKey = (mulEl  * Mul) >> (32 - HASH_TABLE_BITS);
-		
-		if (hashKey == 0xffff) {
-			idxIn++;
-			continue;
-		}
-
+		unsigned int hashKey = (mulEl  * Mul) >> (32 - HASH_TABLE_BITS);
 		int hashVal = hashArr[hashKey];
 		hashArr[hashKey] = idxInP3;
 
-		if (!hashVal) {
-			idxIn++;
-			continue;
-		}
-
-
 		int backRef = idxInP3 - hashVal;
-		if (((backRef < 257 || bufferIn[hashVal + 1] == bufferIn[idxIn + 4])
+		if (hashVal > 0 && hashKey != 0xffff && ((backRef < 257 || bufferIn[hashVal + 1] == bufferIn[idxIn + 4])
 				&& mulEl == (unsigned __int32)((bufferIn[hashVal - 3] << 24) | (bufferIn[hashVal - 2] << 16) | (bufferIn[hashVal - 1] << 8) | bufferIn[hashVal])))
 		{
 			int origIdxIn = idxIn;
 			hashVal += 4 - 3;
 			idxIn += 4;
 
-			while (true)
+			while (idxIn < bufferInLength)
 			{
-				if (idxIn >= iterMax)
-				{
-					while (idxIn < bufferInLength && bufferIn[hashVal] == bufferIn[idxIn])
-					{
-						hashVal++;
-						idxIn++;
-					}
-
-					break;
-				}
-
 				elemP0 = bufferIn[idxIn];
 				mulEl = (mulEl << 8) | elemP0;
 				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn;
 
-				if (bufferIn[hashVal] == elemP0)
+				if (bufferIn[hashVal++] == elemP0)
 				{
-					hashVal++;
+					// hashVal++;
 					idxIn++;
 				}
-				else 
-				{
-					mulEl = (mulEl << 8) | bufferIn[idxIn + 1];
-					hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 1;
-					mulEl = (mulEl << 8) | bufferIn[idxIn + 2];
-					hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 2;
-					break;
-				}
+				else break;
+			}
+
+			if (idxIn < iterMax)
+			{
+				mulEl = (mulEl << 8) | bufferIn[idxIn + 1];
+				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 1;
+				mulEl = (mulEl << 8) | bufferIn[idxIn + 2];
+				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 2;
 			}
 
 			int seqLen;
