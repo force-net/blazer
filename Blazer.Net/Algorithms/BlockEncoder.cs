@@ -71,7 +71,13 @@ namespace Force.Blazer.Algorithms
 			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3 + additionalHeaderSizeForOut];
 		}
 
-		public virtual int CompressBlock(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset)
+		public virtual int CompressBlock(
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset)
+		{
+			return CompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset);
+		}
+
+		public static int CompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset)
 		{
 			var hashArr = new int[HASH_TABLE_LEN + 1];
 			var idxIn = bufferInOffset;
@@ -141,14 +147,11 @@ namespace Force.Blazer.Algorithms
 
 						int seqLen = idxIn - origIdxIn - MIN_SEQ_LEN - isBig;
 						cntLit = origIdxIn - lastProcessedIdxIn;
-
+						
 						#region Write Back Ref
 						if (backRef >= 256 + 1)
 						{
 							bufferOut[idxOut++] = (byte)(((Math.Min(cntLit, 7) << 4) | Math.Min(seqLen, 15)) | 128);
-							if (bufferOut[idxOut - 1] == 0xff && idxOut >= 2000000)
-								Console.WriteLine(idxOut - 1);
-
 							bufferOut[idxOut++] = (byte)hashKey;
 							bufferOut[idxOut++] = (byte)(hashKey >> 8);
 						}

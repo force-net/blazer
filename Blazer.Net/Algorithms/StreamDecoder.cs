@@ -14,18 +14,26 @@ namespace Force.Blazer.Algorithms
 
 		private int _innerBufferLen = 0;
 
-		private Func<bool> _needNewBlock;
+		private Func<byte[], Tuple<int, bool, bool>> _needNewBlock;
 
-		public virtual void Init(int maxUncompressedBlockSize, Func<bool> needNewBlock)
+		private byte[] _inBuffer;
+
+		public virtual void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, bool, bool>> needNewBlock)
 		{
 			_innerBufferMaxLen = maxUncompressedBlockSize + StreamEncoder.MAX_BACK_REF + 1;
 			_innerBuffer = new byte[_innerBufferMaxLen];
+			_inBuffer = new byte[maxUncompressedBlockSize];
 			_needNewBlock = needNewBlock;
 		}
 
 		public int Read(byte[] buffer, int offset, int count)
 		{
-			if (_innerBufferPos == _innerBufferLen) if (!_needNewBlock()) return 0;
+			if (_innerBufferPos == _innerBufferLen)
+			{
+				var res = _needNewBlock(_inBuffer);
+				if (!res.Item3) return 0;
+				ProcessBlock(_inBuffer, res.Item1, res.Item2);
+			}
 
 			count = Math.Min(_innerBufferLen - _innerBufferPos, count);
 			Buffer.BlockCopy(_innerBuffer, _innerBufferPos, buffer, offset, count);
@@ -57,7 +65,13 @@ namespace Force.Blazer.Algorithms
 			return BlazerAlgorithm.Stream;
 		}
 
-		public virtual int DecompressBlock(byte[] bufferIn, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
+		public virtual int DecompressBlock(
+			byte[] bufferIn, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
+		{
+			return DecompressBlockExternal(bufferIn, bufferInLength, bufferOut, idxOut, bufferOutLength);
+		}
+
+		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
 		{
 			var idxIn = 0;
 			while (idxIn < bufferInLength)

@@ -4,6 +4,8 @@ obj
 *.suo
 packages
 .tools
+private.snk
+sign.cmd
 
 # todo: check this folders
 ipch

@@ -111,7 +111,19 @@ namespace Force.Blazer.Algorithms
 			return BlazerAlgorithm.Stream;
 		}
 
-		public virtual int CompressBlock(byte[] bufferIn, int bufferInOffset, int bufferInLength, int bufferInShift, byte[] bufferOut, int bufferOutOffset, int[] hashArr)
+		public virtual int CompressBlock(
+			byte[] bufferIn,
+			int bufferInOffset,
+			int bufferInLength,
+			int bufferInShift,
+			byte[] bufferOut,
+			int bufferOutOffset,
+			int[] hashArr)
+		{
+			return CompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferInShift, bufferOut, bufferOutOffset, hashArr);
+		}
+
+		public static int CompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, int bufferInShift, byte[] bufferOut, int bufferOutOffset, int[] hashArr)
 		{
 			var idxOut = bufferOutOffset;
 			int cntLit;

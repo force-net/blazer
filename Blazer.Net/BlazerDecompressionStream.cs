@@ -81,10 +81,6 @@ namespace Force.Blazer
 
 		private IDecoder _decoder;
 
-		private byte[] _inBuffer;
-
-		private int _inLength;
-		
 		private bool _includeCrc;
 		private bool _includeFooter;
 
@@ -105,7 +101,6 @@ namespace Force.Blazer
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);
 			_decoder.Init(_maxUncompressedBlockSize, GetNextChunk);
 			_algorithmId = (byte)_decoder.GetAlgorithmId();
-			_inBuffer = new byte[_maxUncompressedBlockSize];
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
 		}
@@ -151,7 +146,6 @@ namespace Force.Blazer
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);
 			_decoder.Init(_maxUncompressedBlockSize, GetNextChunk);
 			_algorithmId = (byte)_decoder.GetAlgorithmId();
-			_inBuffer = new byte[_maxUncompressedBlockSize];
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
 
@@ -176,18 +170,18 @@ namespace Force.Blazer
 
 		private byte _encodingType;
 
-		private bool GetNextChunk()
+		private Tuple<int, bool, bool> GetNextChunk(byte[] inBuffer)
 		{
 			// end of stream
-			if (!EnsureRead(_sizeBlock, 0, 4)) return false;
-			
+			if (!EnsureRead(_sizeBlock, 0, 4)) return new Tuple<int, bool, bool>(0, false, false);
+
 			_encodingType = _sizeBlock[0];
-			
+
 			// empty footer
 			if (_encodingType == 0xff)
 			{
 				ValidateFooter(_sizeBlock);
-				return false;
+				return new Tuple<int, bool, bool>(0, false, false);
 			}
 
 			if (_encodingType != 0 && _encodingType != _algorithmId)
@@ -205,20 +199,18 @@ namespace Force.Blazer
 				passedCrc = ((uint)_sizeBlock[0] << 0) | (uint)_sizeBlock[1] << 8 | (uint)_sizeBlock[2] << 16 | (uint)_sizeBlock[3] << 24;
 			}
 
-			if (!EnsureRead(_inBuffer, 0, inLength))
+			if (!EnsureRead(inBuffer, 0, inLength))
 				throw new InvalidOperationException("Invalid block data");
 
 			if (_includeCrc)
 			{
-				var realCrc = Crc32C.Calculate(_inBuffer, 0, inLength);
-				
+				var realCrc = Crc32C.Calculate(inBuffer, 0, inLength);
+
 				if (realCrc != passedCrc)
 					throw new InvalidOperationException("Invalid CRC32C data in passed block. It seems, data error is occured.");
 			}
 
-			_inLength = inLength;
-			_decoder.ProcessBlock(_inBuffer, _inLength, _encodingType != 0x00);
-			return true;
+			return new Tuple<int, bool, bool>(inLength, _encodingType != 0x00, true);
 		}
 
 		private bool EnsureRead(byte[] buffer, int offset, int size)

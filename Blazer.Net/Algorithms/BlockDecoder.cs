@@ -17,13 +17,20 @@ namespace Force.Blazer.Algorithms
 
 		private int _innerBufferLen;
 
-		private Func<bool> _getNewBlock;
+		private byte[] _inBuffer;
+
+		private Func<byte[], Tuple<int, bool, bool>> _needNewBlock;
 
 		private int _maxUncompressedBlockSize;
 
 		public int Read(byte[] buffer, int offset, int count)
 		{
-			if (_innerBufferPos == _innerBufferLen) if (!_getNewBlock()) return 0;
+			if (_innerBufferPos == _innerBufferLen)
+			{
+				var res = _needNewBlock(_inBuffer);
+				if (!res.Item3) return 0;
+				ProcessBlock(_inBuffer, res.Item1, res.Item2);
+			}
 
 			count = Math.Min(_innerBufferLen - _innerBufferPos, count);
 			Buffer.BlockCopy(_innerBuffer, _innerBufferPos, buffer, offset, count);
@@ -45,11 +52,12 @@ namespace Force.Blazer.Algorithms
 			}
 		}
 
-		public void Init(int maxUncompressedBlockSize, Func<bool> getNextBlock)
+		public void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, bool, bool>> getNextBlock)
 		{
 			_innerBuffer = new byte[maxUncompressedBlockSize];
 			_maxUncompressedBlockSize = maxUncompressedBlockSize;
-			_getNewBlock = getNextBlock;
+			_inBuffer = new byte[maxUncompressedBlockSize];
+			_needNewBlock = getNextBlock;
 		}
 
 		public BlazerAlgorithm GetAlgorithmId()

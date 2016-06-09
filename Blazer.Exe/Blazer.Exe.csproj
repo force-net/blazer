@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{026EE2B9-3367-480A-8B46-118F4037C827}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{D1BE8FC3-7D77-4C08-A0D8-D2399A8D903F}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Force.Blazer</RootNamespace>
-    <AssemblyName>Blazer.Net</AssemblyName>
+    <RootNamespace>Force.Blazer.Exe</RootNamespace>
+    <AssemblyName>Blazer</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -20,23 +21,26 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>..\public.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>..\public.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>true</DelaySign>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -48,49 +52,29 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Algorithms\BlockEncoder.cs" />
-    <Compile Include="Algorithms\BlockDecoder.cs" />
-    <Compile Include="Algorithms\BlockDecoderNative.cs" />
-    <Compile Include="Algorithms\BlockEncoderNative.cs" />
-    <Compile Include="Algorithms\Crc32C\Crc32C.cs" />
-    <Compile Include="Algorithms\Crc32C\Crc32CHardware.cs" />
-    <Compile Include="Algorithms\Crc32C\Crc32CSoftware.cs" />
-    <Compile Include="Algorithms\Crc32C\ICrc32CCalculator.cs" />
-    <Compile Include="Algorithms\EncoderDecoderFactory.cs" />
-    <Compile Include="Algorithms\IDecoder.cs" />
-    <Compile Include="Algorithms\IEncoder.cs" />
-    <Compile Include="Algorithms\NoCompressionDecoder.cs" />
-    <Compile Include="Algorithms\NoCompressionEncoder.cs" />
-    <Compile Include="Algorithms\StreamDecoder.cs" />
-    <Compile Include="Algorithms\StreamDecoderNative.cs" />
-    <Compile Include="Algorithms\StreamEncoder.cs" />
-    <Compile Include="Algorithms\StreamEncoderNative.cs" />
-    <Compile Include="BlazerAlgorithm.cs" />
-    <Compile Include="BlazerBaseCompressionStream.cs" />
-    <Compile Include="BlazerDecompressionStream.cs" />
-    <Compile Include="BlazerFlags.cs" />
-    <Compile Include="BlazerNoCompressionStream.cs" />
-    <Compile Include="BlazerStreamCompressionStream.cs" />
-    <Compile Include="BlazerBlockCompressionStream.cs" />
-    <Compile Include="Native\NativeHelper.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\Blazer.Net\bin\Release\Blazer.Net.dll">
+      <Link>Resources\Blazer.Net.dll</Link>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Blazer.Net\Blazer.Net.csproj">
+      <Project>{026EE2B9-3367-480A-8B46-118F4037C827}</Project>
+      <Name>Blazer.Net</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\public.snk">
       <Link>public.snk</Link>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="..\Blazer.Native.Build\Blazer.Native.x64.dll">
-      <Link>Resources\Blazer.Native.x64.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Blazer.Native.Build\Blazer.Native.x86.dll">
-      <Link>Resources\Blazer.Native.x86.dll</Link>
-    </EmbeddedResource>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>cmd /c if exist "$(ProjectDir)sign.cmd" "$(ProjectDir)sign.cmd" "$(TargetPath)" "$(SolutionDir)private.snk"</PostBuildEvent>
+    <PostBuildEvent>del /q $(TargetDir)Blazer.Net.*
+cmd /c if exist "$(ProjectDir)sign.cmd" "$(ProjectDir)sign.cmd" "$(TargetPath)" "$(SolutionDir)private.snk"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace Force.Blazer.Algorithms
 {
@@ -7,17 +6,19 @@ namespace Force.Blazer.Algorithms
 	{
 		[DllImport(@"Blazer.Native.dll", CallingConvention = CallingConvention.Cdecl)]
 		private static extern int blazer_block_compress_block(
-			IntPtr bufferIn, int bufferInOffset, int bufferInLength, IntPtr bufferOut, int bufferOutOffset);
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset);
 
-		private GCHandle _bufferInHandle;
-		private GCHandle _bufferOutHandle;
+		// private GCHandle _bufferInHandle;
+		// private GCHandle _bufferOutHandle;
 
-		public override void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
+		/*public override void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
 		{
 			base.Init(maxInBlockSize, additionalHeaderSizeForOut, onBlockPrepared);
 			_bufferInHandle = GCHandle.Alloc(_bufferIn, GCHandleType.Pinned);
 			_bufferOutHandle = GCHandle.Alloc(_bufferOut, GCHandleType.Pinned);
-		}
+			_bufferInPtr = _bufferInHandle.AddrOfPinnedObject();
+			_bufferOutPtr = _bufferOutHandle.AddrOfPinnedObject();
+		}*/
 
 		public override int CompressBlock(
 			byte[] bufferIn,
@@ -27,18 +28,18 @@ namespace Force.Blazer.Algorithms
 			int bufferOutOffset)
 		{
 			return blazer_block_compress_block(
-				_bufferInHandle.AddrOfPinnedObject(),
+				bufferIn,
 				bufferInOffset,
 				bufferInCount,
-				_bufferOutHandle.AddrOfPinnedObject(),
+				_bufferOut,
 				bufferOutOffset);
 		}
 
-		public override void Dispose()
+		/*public override void Dispose()
 		{
 			_bufferInHandle.Free();
 			_bufferOutHandle.Free();
 			base.Dispose();
-		}
+		}*/
 	}
 }

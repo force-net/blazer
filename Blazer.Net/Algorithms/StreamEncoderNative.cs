@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace Force.Blazer.Algorithms
 {
@@ -7,9 +6,9 @@ namespace Force.Blazer.Algorithms
 	{
 		[DllImport(@"Blazer.Native.dll", CallingConvention = CallingConvention.Cdecl)]
 		private static extern int blazer_stream_compress_block(
-			IntPtr bufferIn, int bufferInOffset, int bufferInLength, int globalOffset, IntPtr bufferOut, int bufferOutOffset, IntPtr hashArr);
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, int globalOffset, byte[] bufferOut, int bufferOutOffset, int[] hashArr);
 
-		private GCHandle _bufferInHandle;
+		/*private GCHandle _bufferInHandle;
 		private GCHandle _bufferOutHandle;
 		private GCHandle _hashArrHandle;
 
@@ -19,7 +18,7 @@ namespace Force.Blazer.Algorithms
 			_bufferInHandle = GCHandle.Alloc(_bufferIn, GCHandleType.Pinned);
 			_bufferOutHandle = GCHandle.Alloc(_bufferOut, GCHandleType.Pinned);
 			_hashArrHandle = GCHandle.Alloc(_hashArr, GCHandleType.Pinned);
-		}
+		}*/
 
 		public override int CompressBlock(
 			byte[] bufferIn,
@@ -31,21 +30,21 @@ namespace Force.Blazer.Algorithms
 			int[] hashArr)
 		{
 			return blazer_stream_compress_block(
-				_bufferInHandle.AddrOfPinnedObject(),
+				bufferIn,
 				bufferInOffset,
 				bufferInLength,
 				bufferInShift,
-				_bufferOutHandle.AddrOfPinnedObject(),
+				bufferOut,
 				bufferOutOffset,
-				_hashArrHandle.AddrOfPinnedObject());
+				hashArr);
 		}
 
-		public override void Dispose()
+		/*public override void Dispose()
 		{
 			_bufferInHandle.Free();
 			_bufferOutHandle.Free();
 			_hashArrHandle.Free();
 			base.Dispose();
-		}
+		}*/
 	}
 }
