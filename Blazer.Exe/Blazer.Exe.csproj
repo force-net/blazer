@@ -52,8 +52,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandLineOptions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StatStream.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Blazer.Net\bin\Release\Blazer.Net.dll">

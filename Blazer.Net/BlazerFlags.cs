@@ -29,6 +29,12 @@ namespace Force.Blazer
 		IncludeFooter = 1024,
 		RespectFlush = 2048,
 
-		Default = IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush
+		EncryptInner = 4096,
+		// EncryptOuter = 8192,
+		// AddRecoveryInfo = 16384,
+
+		Default = IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush,
+		DefaultStream = Default | InBlockSize64K,
+		DefaultBlock = InBlockSize2M | IncludeCrc | IncludeFooter | IncludeHeader
 	}
 }

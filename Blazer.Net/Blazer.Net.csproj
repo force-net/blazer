@@ -72,6 +72,8 @@
     <Compile Include="BlazerNoCompressionStream.cs" />
     <Compile Include="BlazerStreamCompressionStream.cs" />
     <Compile Include="BlazerBlockCompressionStream.cs" />
+    <Compile Include="Encyption\DecryptHelper.cs" />
+    <Compile Include="Encyption\EncryptHelper.cs" />
     <Compile Include="Native\NativeHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

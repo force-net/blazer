@@ -3,6 +3,7 @@ using System.IO;
 
 using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
+using Force.Blazer.Encyption;
 
 namespace Force.Blazer
 {
@@ -92,7 +93,9 @@ namespace Force.Blazer
 
 		private byte[] _header;
 
-		public BlazerBaseCompressionStream(Stream innerStream, IEncoder encoder, BlazerFlags flags)
+		private readonly NullEncryptHelper _encryptHelper;
+
+		public BlazerBaseCompressionStream(Stream innerStream, IEncoder encoder, BlazerFlags flags, string password = null)
 		{
 			if (innerStream == null)
 				throw new ArgumentNullException("innerStream");
@@ -112,13 +115,25 @@ namespace Force.Blazer
 			_encoderAlgorithmId = (byte)_encoder.GetAlgorithmId();
 			if (_encoderAlgorithmId > 15)
 				throw new InvalidOperationException("Invalid encoder algorithm");
-			_encoder.Init(_maxInBlockSize, _outBufferHeaderSize, WriteOuterBlock);
+
+			Action<byte[], int, bool> writeOuterBlock = WriteOuterBlock;
+
+			if (!string.IsNullOrEmpty(password))
+			{
+				flags |= BlazerFlags.EncryptInner;
+				_encryptHelper = new EncryptHelper(password);
+				writeOuterBlock = WriteOuterBlockEncrypted;
+			}
+			else
+			{
+				_encryptHelper = new NullEncryptHelper();
+			}
 
 			if (_includeHeader)
 			{
 				_header = new byte[]
 							{
-								(byte)'B', (byte)'L', (byte)'Z',
+								(byte)'b', (byte)'L', (byte)'z',
 								0x00, // version of file structure
 								(byte)((((uint)flags) & 0xff) | ((uint)_encoderAlgorithmId << 4)),
 								(byte)(((uint)flags >> 8) & 0xff),
@@ -126,19 +141,28 @@ namespace Force.Blazer
 								(byte)(((uint)flags >> 24) & 0xff)
 							};
 			}
+
+			_header = _encryptHelper.AppendHeader(_header);
+			_encoder.Init(_maxInBlockSize, _outBufferHeaderSize, writeOuterBlock);
 		}
 
-		public BlazerBaseCompressionStream(Stream innerStream, BlazerAlgorithm algorithm, BlazerFlags flags)
-			: this(innerStream, EncoderDecoderFactory.GetEncoder(algorithm), flags)
+		public BlazerBaseCompressionStream(Stream innerStream, BlazerAlgorithm algorithm, BlazerFlags flags, string password = null)
+			: this(innerStream, EncoderDecoderFactory.GetEncoder(algorithm), flags, password)
 		{
 		}
 
 		protected override void Dispose(bool disposing)
 		{
 			_encoder.CompressAndWrite();
+			// zero-length file
+			if (_header != null)
+			{
+				_innerStream.Write(_header, 0, _header.Length);
+				_header = null;
+			}
 
 			if (_includeFooter)
-				_innerStream.Write(new byte[] { 0xff, (byte)'Z', (byte)'L', (byte)'B' }, 0, 4);
+				_innerStream.Write(new byte[] { 0xff, (byte)'Z', (byte)'l', (byte)'B' }, 0, 4);
 
 			_innerStream.Flush();
 
@@ -176,6 +200,7 @@ namespace Force.Blazer
 			bufferOut[1] = (byte)o;
 			bufferOut[2] = (byte)(o >> 8);
 			bufferOut[3] = (byte)(o >> 16);
+
 			if (_includeCrc)
 			{
 				var crc = Crc32C.Calculate(bufferOut, _outBufferHeaderSize, length - _outBufferHeaderSize);
@@ -186,6 +211,38 @@ namespace Force.Blazer
 			}
 
 			_innerStream.Write(bufferOut, 0, length);
+		}
+
+		private void WriteOuterBlockEncrypted(byte[] bufferOut, int length, bool isCompressed)
+		{
+			if (_header != null)
+			{
+				_innerStream.Write(_header, 0, _header.Length);
+				_header = null;
+			}
+
+			if (length == _outBufferHeaderSize) return;
+			var o = length - _outBufferHeaderSize - 1; // -1 - we always write here at least 1 byte, so there is no point to send info about this byte
+
+			bufferOut[0] = (byte)(isCompressed ? _encoderAlgorithmId : 0x00);
+			bufferOut[1] = (byte)o;
+			bufferOut[2] = (byte)(o >> 8);
+			bufferOut[3] = (byte)(o >> 16);
+
+			var targetBuffer = _encryptHelper.Encrypt(bufferOut, _outBufferHeaderSize, length - _outBufferHeaderSize);
+			var targetLength = targetBuffer.Length;
+
+			if (_includeCrc)
+			{
+				var crc = Crc32C.Calculate(targetBuffer, 0, targetLength);
+				bufferOut[4] = (byte)crc;
+				bufferOut[5] = (byte)(crc >> 8);
+				bufferOut[6] = (byte)(crc >> 16);
+				bufferOut[7] = (byte)(crc >> 24);
+			}
+
+			_innerStream.Write(bufferOut, 0, _outBufferHeaderSize);
+			_innerStream.Write(targetBuffer, 0, targetLength);
 		}
 	}
 }

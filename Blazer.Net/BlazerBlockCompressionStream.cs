@@ -8,12 +8,12 @@ namespace Force.Blazer
 	public class BlazerBlockCompressionStream : BlazerBaseCompressionStream
 	{
 		public BlazerBlockCompressionStream(Stream innerStream)
-			: base(innerStream, BlazerAlgorithm.Block, BlazerFlags.InBlockSize2M | BlazerFlags.IncludeCrc | BlazerFlags.IncludeFooter | BlazerFlags.IncludeHeader)
+			: base(innerStream, BlazerAlgorithm.Block, BlazerFlags.DefaultBlock)
 		{
 		}
 
-		public BlazerBlockCompressionStream(Stream innerStream, BlazerFlags flags)
-			: base(innerStream, BlazerAlgorithm.Block, flags)
+		public BlazerBlockCompressionStream(Stream innerStream, BlazerFlags flags = BlazerFlags.DefaultBlock, string password = null)
+			: base(innerStream, BlazerAlgorithm.Block, flags, password)
 		{
 		}
 	}
