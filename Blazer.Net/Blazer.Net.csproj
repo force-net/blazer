@@ -52,6 +52,7 @@
     <Compile Include="Algorithms\BlockDecoder.cs" />
     <Compile Include="Algorithms\BlockDecoderNative.cs" />
     <Compile Include="Algorithms\BlockEncoderNative.cs" />
+    <Compile Include="Algorithms\StreamEncoderHigh.cs" />
     <Compile Include="Algorithms\Crc32C\Crc32C.cs" />
     <Compile Include="Algorithms\Crc32C\Crc32CHardware.cs" />
     <Compile Include="Algorithms\Crc32C\Crc32CSoftware.cs" />
@@ -72,6 +73,7 @@
     <Compile Include="BlazerNoCompressionStream.cs" />
     <Compile Include="BlazerStreamCompressionStream.cs" />
     <Compile Include="BlazerBlockCompressionStream.cs" />
+    <Compile Include="BlazerStreamHighCompressionStream.cs" />
     <Compile Include="Encyption\DecryptHelper.cs" />
     <Compile Include="Encyption\EncryptHelper.cs" />
     <Compile Include="Native\NativeHelper.cs" />

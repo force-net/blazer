@@ -35,6 +35,6 @@ namespace Force.Blazer
 
 		Default = IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush,
 		DefaultStream = Default | InBlockSize64K,
-		DefaultBlock = InBlockSize2M | IncludeCrc | IncludeFooter | IncludeHeader
+		DefaultBlock = Default | InBlockSize2M
 	}
 }

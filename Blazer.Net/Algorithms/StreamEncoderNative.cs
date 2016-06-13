@@ -20,14 +20,13 @@ namespace Force.Blazer.Algorithms
 			_hashArrHandle = GCHandle.Alloc(_hashArr, GCHandleType.Pinned);
 		}*/
 
-		public override int CompressBlock(
+		protected override int CompressBlock(
 			byte[] bufferIn,
 			int bufferInOffset,
 			int bufferInLength,
 			int bufferInShift,
 			byte[] bufferOut,
-			int bufferOutOffset,
-			int[] hashArr)
+			int bufferOutOffset)
 		{
 			return blazer_stream_compress_block(
 				bufferIn,
@@ -36,7 +35,7 @@ namespace Force.Blazer.Algorithms
 				bufferInShift,
 				bufferOut,
 				bufferOutOffset,
-				hashArr);
+				_hashArr);
 		}
 
 		/*public override void Dispose()

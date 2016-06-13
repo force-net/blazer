@@ -39,6 +39,7 @@ namespace Force.Blazer.Exe
 			var isStdIn = options.Has("stdin");
 			var isStdOut = options.Has("stdout");
 			var password = options.Get("p", "password");
+			var isBlobOnly = options.Has("blobonly");
 
 			if (isDecompress)
 			{
@@ -66,7 +67,22 @@ namespace Force.Blazer.Exe
 					new FileStream(fileName, FileMode.Truncate, FileAccess.Write).Close();
 				}
 
-				using (var inFile = new BlazerDecompressionStream(isStdIn ? Console.OpenStandardInput() : File.OpenRead(archiveName), password))
+				Stream inStream = isStdIn ? Console.OpenStandardInput() : File.OpenRead(archiveName);
+
+				if (!isBlobOnly)
+					inStream = new BlazerDecompressionStream(inStream, password);
+				else
+				{
+					BlazerAlgorithm alg;
+					var mode = (options.Get("mode") ?? "block").ToLowerInvariant();
+					if (mode == "stream" || mode == "streamhigh") alg = BlazerAlgorithm.Stream;
+					else if (mode == "none") alg = BlazerAlgorithm.NoCompress;
+					else if (mode == "block") alg = BlazerAlgorithm.Block;
+					else throw new InvalidOperationException("Unsupported mode");
+					inStream = new BlazerDecompressionStream(inStream, alg, BlazerFlags.InBlockSize16M, password);
+				}
+
+				using (var inFile = inStream)
 				using (var outFile = isStdOut ? Console.OpenStandardOutput() : new StatStream(new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true))
 				{
 					inFile.CopyTo(outFile);
@@ -97,10 +113,16 @@ namespace Force.Blazer.Exe
 				var mode = (options.Get("mode") ?? "block").ToLowerInvariant();
 
 				var outStream = isStdOut ? Console.OpenStandardOutput() : new FileStream(archiveName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+				var customFlags = isBlobOnly ? BlazerFlags.InBlockSize16M : (BlazerFlags?)null;
 				Stream blazerStream;
-				if (mode == "none") blazerStream = new BlazerNoCompressionStream(outStream, password: password);
-				else if (mode == "stream") blazerStream = new BlazerStreamCompressionStream(outStream, password: password);
-				else if (mode == "block") blazerStream = new BlazerBlockCompressionStream(outStream, password: password);
+				if (mode == "none") 
+					blazerStream = new BlazerNoCompressionStream(outStream, password: password, flags: customFlags ?? BlazerFlags.DefaultStream);
+				else if (mode == "stream")
+					blazerStream = new BlazerStreamCompressionStream(outStream, password: password, flags: customFlags ?? BlazerFlags.DefaultStream);
+				else if (mode == "streamhigh")
+					blazerStream = new BlazerStreamHighCompressionStream(outStream, password: password, flags: customFlags ?? BlazerFlags.DefaultStream);
+				else if (mode == "block") 
+					blazerStream = new BlazerBlockCompressionStream(outStream, password: password, flags: customFlags ?? BlazerFlags.DefaultBlock);
 				else throw new InvalidOperationException("Invalid compression mode");
 
 				using (var inFile = isStdIn ? Console.OpenStandardInput() : new StatStream(File.OpenRead(fileName), true))

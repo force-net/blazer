@@ -1,117 +1,37 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Force.Blazer.Algorithms
 {
-	public class StreamEncoder : IEncoder
+	/// <summary>
+	/// Slow, but better version of stream encoder. 
+	/// Incompleted (working, but can be improved)
+	/// </summary>
+	public class StreamEncoderHigh : StreamEncoder
 	{
 		private const int HASH_TABLE_BITS = 16;
 		private const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
-		public const int MAX_BACK_REF = (1 << 16) + 256;
+
+		private const int HASHARR_CNT = 8;
+
 		private const int MIN_SEQ_LEN = 4;
 		
 		// carefully selected random number
 		private const uint MUL = 1527631329;
 
-		private const int SIZE_SHIFT = 1000000000;
+		private int[][] _hashArr2;
 
-		[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1304:NonPrivateReadonlyFieldsMustBeginWithUpperCaseLetter", Justification = "Reviewed. Suppression is OK here.")]
-		protected readonly int[] _hashArr = new int[HASH_TABLE_LEN + 1];
+		private int[] _hashArrPos;
 
-		[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Reviewed. Suppression is OK here.")]
-		protected byte[] _bufferIn;
-
-		[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Reviewed. Suppression is OK here.")]
-		protected byte[] _bufferOut;
-
-		private int _innerBufferSize;
-
-		private int _maxInBlockSize;
-
-		private int _bufferInPosFact;
-
-		private int _bufferInLength;
-
-		private int _shiftValue;
-
-		private int _bufferOutIdx;
-
-		private int _bufferOutHeaderSize;
-
-		private Action<byte[], int, bool> _onBlockPrepared;
-
-		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
+		public override void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
 		{
-			_maxInBlockSize = maxInBlockSize;
-			_innerBufferSize = MAX_BACK_REF + maxInBlockSize;
-			_bufferIn = new byte[_innerBufferSize + 1];
-			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3 + additionalHeaderSizeForOut];
-			_bufferOutIdx = additionalHeaderSizeForOut;
-			_bufferOutHeaderSize = additionalHeaderSizeForOut;
-			_onBlockPrepared = onBlockPrepared;
+			base.Init(maxInBlockSize, additionalHeaderSizeForOut, onBlockPrepared);
+			_hashArr2 = new int[HASHARR_CNT][];
+			for (var i = 0; i < HASHARR_CNT; i++)
+				_hashArr2[i] = new int[HASH_TABLE_LEN + 1];
+			_hashArrPos = new int[HASH_TABLE_LEN + 1];
 		}
 
-		public void Write(byte[] buffer, int offset, int count)
-		{
-			while (count > 0)
-			{
-				// shift
-				if (_innerBufferSize - _bufferInPosFact < _maxInBlockSize)
-				{
-					var srcOffset = _bufferInPosFact - MAX_BACK_REF;
-					Buffer.BlockCopy(_bufferIn, srcOffset, _bufferIn, 0, _bufferInLength + MAX_BACK_REF);
-					_bufferInPosFact = MAX_BACK_REF;
-					_shiftValue += srcOffset;
-				}
-
-				// copying minimal count to set MAX_BLOCK = MAX_IN_BLOCK_SIZE
-				var toCopy = Math.Min(count, _maxInBlockSize - _bufferInLength);
-				Buffer.BlockCopy(buffer, offset, _bufferIn, _bufferInLength + _bufferInPosFact, toCopy);
-				_bufferInLength += toCopy;
-
-				if (_bufferInLength >= _maxInBlockSize)
-				{
-					CompressAndWrite();
-					if (_shiftValue >= 2 * SIZE_SHIFT)
-					{
-						ShiftHashtable();
-					}
-				}
-
-				count -= toCopy;
-				offset += toCopy;
-			}
-		}
-
-		public void CompressAndWrite()
-		{
-			// nothing to do
-			if (_bufferInLength == 0) return;
-
-			var cnt = CompressBlock(_bufferIn, _bufferInPosFact, _bufferInLength + _bufferInPosFact, _shiftValue, _bufferOut, _bufferOutIdx);
-			if (cnt - _bufferOutIdx >= _bufferInLength)
-			{
-				Buffer.BlockCopy(_bufferIn, _bufferInPosFact, _bufferOut, _bufferOutIdx, _bufferInLength);
-				_bufferOutIdx += _bufferInLength;
-				_onBlockPrepared(_bufferOut, _bufferOutIdx, false);
-			}
-			else
-			{
-				_bufferOutIdx = cnt;
-				_onBlockPrepared(_bufferOut, _bufferOutIdx, true);
-			}
-
-			_bufferInPosFact += _bufferInLength;
-			_bufferInLength = 0;
-			_bufferOutIdx = _bufferOutHeaderSize;
-		}
-
-		public BlazerAlgorithm GetAlgorithmId()
-		{
-			return BlazerAlgorithm.Stream;
-		}
-
-		protected virtual int CompressBlock(
+		protected override int CompressBlock(
 			byte[] bufferIn,
 			int bufferInOffset,
 			int bufferInLength,
@@ -119,10 +39,24 @@ namespace Force.Blazer.Algorithms
 			byte[] bufferOut,
 			int bufferOutOffset)
 		{
-			return CompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferInShift, bufferOut, bufferOutOffset, _hashArr);
+			return CompressBlockHighExternal(bufferIn, bufferInOffset, bufferInLength, bufferInShift, bufferOut, bufferOutOffset, _hashArr2, _hashArrPos);
 		}
 
-		public static int CompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, int bufferInShift, byte[] bufferOut, int bufferOutOffset, int[] hashArr)
+		private static int FindMaxSequence(byte[] bufferIn, int iterMax, int idxIn, int valIn)
+		{
+			if (idxIn >= iterMax) return -1;
+			var total = 0;
+			while (idxIn < iterMax && bufferIn[idxIn] == bufferIn[valIn])
+			{
+				idxIn++;
+				valIn++;
+				total++;
+			}
+
+			return total;
+		}
+
+		public static int CompressBlockHighExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, int bufferInShift, byte[] bufferOut, int bufferOutOffset, int[][] hashArr, int[] hashArrPos)
 		{
 			var idxOut = bufferOutOffset;
 			int cntLit;
@@ -149,8 +83,51 @@ namespace Force.Blazer.Algorithms
 
 				mulEl = (mulEl << 8) | elemP0;
 				var hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-				var hashVal = hashArr[hashKey] - globalOfs;
-				hashArr[hashKey] = idxIn + globalOfs;
+				int hashVal = 0;
+
+				var min = Math.Max(0, hashArrPos[hashKey] - HASHARR_CNT);
+				var cnt = 0;
+				for (var i = hashArrPos[hashKey] - 1; i >= min; i--)
+				{
+					var hashValLocal = hashArr[i & (HASHARR_CNT - 1)][hashKey] - globalOfs;
+					int backRefLocal = idxIn - hashValLocal;
+					if (backRefLocal < MAX_BACK_REF)
+					{
+						var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn, hashValLocal) + (backRefLocal < 257 ? 1 : 0);
+						if (cntLocal > cnt)
+						{
+							cnt = cntLocal;
+							hashVal = hashValLocal;
+						}
+					} 
+					else
+						break;
+				}
+
+				// this code slightly improves compression, but compression speed became very bad
+				/*if (cnt >= 5)
+				{
+					var hashKeyNext = ((mulEl << 8 | bufferIn[idxIn + 1]) * MUL) >> (32 - HASH_TABLE_BITS);
+					for (var i = hashArrPos[hashKeyNext] - 1; i >= min; i--)
+					{
+						var hashValLocal = hashArr[i & (HASHARR_CNT - 1)][hashKeyNext] - globalOfs;
+						int backRefLocal = idxIn - hashValLocal;
+						if (backRefLocal < MAX_BACK_REF)
+						{
+							var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn + 1, hashValLocal) + (backRefLocal < 257 ? 1 : 0) - 1;
+							if (cntLocal > cnt)
+							{
+								hashVal = 0;
+								break;
+							}
+						}
+						else
+							break;
+					}
+				}*/
+
+				// var hashVal = hashArr[hashArrPos[hashKey] & (HASHARR_CNT - 1)][hashKey] - globalOfs;
+				hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn + globalOfs;
 				var backRef = idxIn - hashVal;
 				var isBig = backRef < 257 ? 0 : 1;
 				if (hashVal > 0
@@ -168,7 +145,7 @@ namespace Force.Blazer.Algorithms
 						elemP0 = bufferIn[idxIn];
 						mulEl = (mulEl << 8) | elemP0;
 						hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-						hashArr[hashKey] = idxIn + globalOfs;
+						hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn + globalOfs;
 
 						if (bufferIn[hashVal] == elemP0)
 						{
@@ -285,11 +262,11 @@ namespace Force.Blazer.Algorithms
 					{
 						mulEl = (mulEl << 8) | bufferIn[idxIn - 2];
 						hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-						hashArr[hashKey] = idxIn - 2 + globalOfs;
+						hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn - 2 + globalOfs;
 
 						mulEl = (mulEl << 8) | bufferIn[idxIn - 1];
 						hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-						hashArr[hashKey] = idxIn - 1 + globalOfs;
+						hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn - 1 + globalOfs;
 					}
 
 					#endregion
@@ -348,17 +325,6 @@ namespace Force.Blazer.Algorithms
 			#endregion
 
 			return idxOut;
-		}
-
-		public void ShiftHashtable()
-		{
-			_shiftValue -= SIZE_SHIFT;
-			for (var i = 0; i < HASH_TABLE_LEN; i++)
-				_hashArr[i] = Math.Min(0, _hashArr[i] - SIZE_SHIFT);
-		}
-
-		public virtual void Dispose()
-		{
 		}
 	}
 }

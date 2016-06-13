@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
+using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
 using Force.Blazer.Native;
 
@@ -18,10 +19,12 @@ namespace Force.Blazer.Benchmark
 		public static void Main()
 		{
 			BenchCrc32C();
-			BenchNoCompression();
-			// BenchFile("AdventureWorks (high compressible db)", @"..\..\..\TestFiles\AdventureWorks2012_Data.mdf");
-			// BenchFile("enwiki8 (big text document)", @"..\..\..\TestFiles\enwik8");
-			BenchSilesia();
+			//BenchNoCompression();
+			// BenchFile("Selesia Total", @"..\..\..\TestFiles\Silesia\ztotal.tar");
+			// BenchFile("Log", @"..\..\..\TestFiles\Service.2016-05-01.log");
+			BenchFile("AdventureWorks (high compressible db)", @"..\..\..\TestFiles\AdventureWorks2012_Data.mdf");
+			BenchFile("enwiki8 (big text document)", @"..\..\..\TestFiles\enwik8");
+			// BenchSilesia();
 		}
 
 	    private static void BenchCrc32C()
@@ -88,6 +91,7 @@ namespace Force.Blazer.Benchmark
 			NativeHelper.SetNativeImplementation(false);
 			
 			DoBench("Stream/S", array,  x => new BlazerStreamCompressionStream(x), x => new BlazerDecompressionStream(x));
+			DoBench("Stream/SH", array, x => new BlazerBaseCompressionStream(x, new StreamEncoderHigh(), BlazerFlags.DefaultStream), x => new BlazerDecompressionStream(x));
 			NativeHelper.SetNativeImplementation(true);
 			DoBench("Stream/N", array, x => new BlazerStreamCompressionStream(x), x => new BlazerDecompressionStream(x));
 
@@ -97,6 +101,7 @@ namespace Force.Blazer.Benchmark
 			DoBench("Block/N ", array, x => new BlazerBlockCompressionStream(x), x => new BlazerDecompressionStream(x));
 
 			DoBench("LZ4     ", array, x => new LZ4Stream(x, LZ4StreamMode.Compress), x => new LZ4Stream(x, LZ4StreamMode.Decompress));
+			DoBench("LZ4/HC  ", array, x => new LZ4Stream(x, LZ4StreamMode.Compress, LZ4StreamFlags.HighCompression), x => new LZ4Stream(x, LZ4StreamMode.Decompress));
 			DoBench("Snappy  ", array, x => new SnappyStream(x, CompressionMode.Compress), x => new SnappyStream(x, CompressionMode.Decompress));
 			DoBench("StdGZip ", array, x => new GZipStream(x, CompressionMode.Compress), x => new GZipStream(x, CompressionMode.Decompress));
 		}
