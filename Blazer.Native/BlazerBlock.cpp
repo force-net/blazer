@@ -102,7 +102,7 @@ extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned ch
 
 			if (backRef >= 256 + 1)
 			{
-				seqLen = idxIn - origIdxIn - MIN_SEQ_LEN - 1;
+				seqLen = idxIn - origIdxIn - MIN_SEQ_LEN/* - 1*/;
 				*(bufferOut++) = (unsigned char)(((MIN(cntLit, 7) << 4) | MIN(seqLen, 15)) | 128);
 
 				*((unsigned __int16*)bufferOut) = hashKey;
@@ -249,7 +249,7 @@ extern "C" __declspec(dllexport) __int32 blazer_block_decompress_block(unsigned 
 		if (elem >= 128)
 		{
 			hashIdx = *(unsigned __int16*)(bufferIn);
-			seqCnt = seqCntFirst + 5;
+			seqCnt = seqCntFirst + /*5*/4;
 			bufferIn += 2;
 			if (hashIdx == 0xffff)
 			{

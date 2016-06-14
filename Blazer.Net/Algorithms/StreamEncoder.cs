@@ -178,7 +178,7 @@ namespace Force.Blazer.Algorithms
 						else break;
 					}
 
-					int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3 - isBig;
+					int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3/* - isBig*/;
 
 					#region Write Back Ref
 

@@ -3,4 +3,4 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe /t:Rebuild /p:Config
 xcopy /y Release\Blazer.Native.x86.dll ..\Blazer.Native.Build\
 xcopy /y Release\Blazer.Native.x64.dll ..\Blazer.Native.Build\
 
-del /s /q  %temp%\Blazer.Net.0.0.1.0
+del /s /q  %temp%\Blazer.Net.0.1.0.2

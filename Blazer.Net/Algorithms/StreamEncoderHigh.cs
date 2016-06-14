@@ -93,7 +93,7 @@ namespace Force.Blazer.Algorithms
 					int backRefLocal = idxIn - hashValLocal;
 					if (backRefLocal < MAX_BACK_REF)
 					{
-						var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn, hashValLocal) + (backRefLocal < 257 ? 1 : 0);
+						var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn - 3, hashValLocal - 3) + (backRefLocal < 257 ? 1 : 0);
 						if (cntLocal > cnt)
 						{
 							cnt = cntLocal;
@@ -104,37 +104,35 @@ namespace Force.Blazer.Algorithms
 						break;
 				}
 
-				// this code slightly improves compression, but compression speed became very bad
-				/*if (cnt >= 5)
+				if (cnt >= 4)
 				{
 					var hashKeyNext = ((mulEl << 8 | bufferIn[idxIn + 1]) * MUL) >> (32 - HASH_TABLE_BITS);
-					for (var i = hashArrPos[hashKeyNext] - 1; i >= min; i--)
+					var minNext = Math.Max(0, hashArrPos[hashKeyNext] - HASHARR_CNT);
+					for (var i = hashArrPos[hashKeyNext] - 1; i >= minNext; i--)
 					{
 						var hashValLocal = hashArr[i & (HASHARR_CNT - 1)][hashKeyNext] - globalOfs;
 						int backRefLocal = idxIn - hashValLocal;
 						if (backRefLocal < MAX_BACK_REF)
 						{
-							var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn + 1, hashValLocal) + (backRefLocal < 257 ? 1 : 0) - 1;
+							var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn + 1 - 3, hashValLocal - 3) + (backRefLocal < 257 ? 1 : 0) - 0;
 							if (cntLocal > cnt)
 							{
-								hashVal = 0;
+								// hashVal = 0;
+								cnt = 0;
 								break;
 							}
 						}
 						else
 							break;
 					}
-				}*/
+				}
 
 				// var hashVal = hashArr[hashArrPos[hashKey] & (HASHARR_CNT - 1)][hashKey] - globalOfs;
 				hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn + globalOfs;
-				var backRef = idxIn - hashVal;
-				var isBig = backRef < 257 ? 0 : 1;
-				if (hashVal > 0
-					&& backRef < MAX_BACK_REF
-					&& ((isBig == 0 || bufferIn[hashVal + 1] == bufferIn[idxIn + 1])
-						&& mulEl == (uint)((bufferIn[hashVal - 3] << 24) | (bufferIn[hashVal - 2] << 16) | (bufferIn[hashVal - 1] << 8) | bufferIn[hashVal - 0])))
+				// var isBig = backRef < 257 ? 0 : 1;
+				if (cnt >= 4)
 				{
+					var backRef = idxIn - hashVal;
 					cntLit = idxIn - lastProcessedIdxIn;
 
 					hashVal++;
@@ -155,7 +153,7 @@ namespace Force.Blazer.Algorithms
 						else break;
 					}
 
-					int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3 - isBig;
+					int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3/* - isBig*/;
 
 					#region Write Back Ref
 

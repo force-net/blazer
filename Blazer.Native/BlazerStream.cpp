@@ -94,7 +94,7 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_compress_block(unsigned c
 				else break;
 			}
 
-			int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3 - isBig;
+			int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3/* - isBig*/;
 
 			if (backRef >= 256 + 1)
 			{
@@ -251,7 +251,7 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned
 		if (elem >= 128)
 		{
 			backRef = *(unsigned __int16*)(bufferIn) + 257;
-			seqCnt = seqCntFirst + 5;
+			seqCnt = seqCntFirst + /*5*/ 4;
 			bufferIn += 2;
 			if (backRef == 0xffff + 257)
 			{

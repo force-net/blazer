@@ -145,7 +145,7 @@ namespace Force.Blazer.Algorithms
 							}
 						}
 
-						int seqLen = idxIn - origIdxIn - MIN_SEQ_LEN - isBig;
+						int seqLen = idxIn - origIdxIn - MIN_SEQ_LEN/* - isBig*/;
 						cntLit = origIdxIn - lastProcessedIdxIn;
 						
 						#region Write Back Ref

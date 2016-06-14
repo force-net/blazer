@@ -87,7 +87,7 @@ namespace Force.Blazer.Algorithms
 				if (elem >= 128)
 				{
 					backRef = (bufferIn[idxIn++] | bufferIn[idxIn++] << 8) + 257;
-					seqCnt = seqCntFirst + 5;
+					seqCnt = seqCntFirst + 4;
 					if (backRef == 0xffff + 257)
 					{
 						seqCntFirst = 0;

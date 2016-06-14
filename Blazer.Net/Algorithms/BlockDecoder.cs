@@ -87,7 +87,7 @@ namespace Force.Blazer.Algorithms
 				if (elem >= 128)
 				{
 					hashIdx = bufferIn[idxIn++] | (bufferIn[idxIn++] << 8);
-					seqCnt = seqCntFirst + MIN_SEQ_LEN + 1;
+					seqCnt = seqCntFirst + MIN_SEQ_LEN/* + 1*/;
 					if (hashIdx == 0xffff)
 					{
 						seqCnt = 0;
