@@ -6,11 +6,12 @@ Currently, it is on develop stage. It is relatively stable, but format and struc
 ## Description
 
 Blazer is low-compression, fast-speed archiver/compressor **with stream supporting**.
-In general, it similar to [LZ4](http://www.lz4.org/) or [Snapy](http://google.github.io/snappy/), but Blazer compression rate is slightly better and it supports streaming mode.
+In general, it similar to [LZ4](http://www.lz4.org/) or [Snappy](http://google.github.io/snappy/), but Blazer compression rate is slightly better and it supports streaming mode.
 
 What is streaming mode? Imagine, you have a monitoring service, which sends a lot of *similar* data about own status. Usually this data is same, but slightly differs by time and some parameters. But every portion of data requires a *flush* operation. In another words, it should be saved on disk or transferred via network.
 You want to compress this data, and want to do it fast, so, GZip is very slow for you. You can choose Snappy or LZ4, but these compressors are *block*. Every piece of data compressed independently. It is not problem with large chunks, but small chunks cause serious degradation.
 This pictore shows compression rate in relation to block size. Tests was performed on large log file, with .NET implemenation of corresponding compressors. In .NET, standard [GZipStream](https://msdn.microsoft.com/en-us/library/system.io.compression.gzipstream(v=vs.110).aspx) does not support flush at all, so, instead of it [SharpZipLib](https://icsharpcode.github.io/SharpZipLib/) was used.
+
 ![Block Size Chart](Doc/Images/chart_blocksize1.png)
 
 *Percents of compression more than 100% due adding of headers, footers and other structural elements by compressors*
@@ -34,27 +35,25 @@ In another words, you can meet next situations:
 ### Compression rates
 
 Compression rate of [Silesia corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia) all tar'ed files.
+
 ![Block Size Chart](Doc/Images/chart_comprrate1.png)
 
-*(Used .NET implemantations of corresponding algorithms, [QuickLZ](http://www.quicklz.com/) does not use stream implementation in C#, so, data was simulated by code)*
+*(Used .NET implementations of corresponding algorithms, most of them are wrappers for native code, [QuickLZ](http://www.quicklz.com/) does not use stream implementation in C#, so, data was simulated by code)*
 
 Table version:
 
-
-Name                | Compression Rate (lower is better)
---------------------|--------
-Blazer Stream       | 42.742%
-Blazer Stream High  | 37.608%
-Blazer Block        | 40.974%
-LZ4                 | 48.028%
-LZ4 HC              | 36.990%
-QuickLZ/1           | 44.691%
-QuickLZ/3           | 38.605%
-Snappy              | 47.847%
-GZip                | 32.191%
-BZip2               | 25.757%
-
-*Other details about compession/decompression speed will be described later)*
+Name                | Compression Rate (lower is better) | Compression Speed (MB/s) | Decompression Speed (MB/s)
+--------------------|------------------------------------|--------------------------|---------------------------
+Blazer Stream       | 42.742%                            | 181                      | 573
+Blazer Stream High  | 37.608%                            | 20                       | 598
+Blazer Block        | 40.974%                            | 222                      | 278
+LZ4                 | 48.028%                            | 281                      | 986
+LZ4 HC              | 36.990%                            | 28                       | 1182
+QuickLZ/1           | 44.691%                            | 206                      | 227
+QuickLZ/3           | 38.605%                            | 27                       | 306
+Snappy              | 47.847%                            | 359                      | 409
+GZip                | 32.191%                            | 22                       | 83
+BZip2               | 25.757%                            | 4                        | 16
 
 ## Other important points
 

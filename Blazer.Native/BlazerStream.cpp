@@ -10,6 +10,7 @@
 #define MUL 1527631329
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define CALC_HASH(v) ((v) * MUL) >> (32 - HASH_TABLE_BITS)
 
 inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst, __int32 count)
 {
@@ -35,6 +36,35 @@ inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst, __int3
 	return dst;
 }
 
+int __inline write_len(unsigned char* bufferOut, int c)
+{
+	if (c < 253) 
+	{
+		*(bufferOut) = (unsigned char)c;
+		return 1;
+	}
+	if (c < 253 + 256)
+	{
+		*(bufferOut) = 253;
+		*(bufferOut + 1) = (unsigned char)(c - 253);
+		return 2;
+	}
+	if (c < 253 + (256 * 256))
+	{
+		*(bufferOut) = 254;
+		c -= 253 + 256;
+		*((unsigned __int16*)(bufferOut + 1)) = c;
+		return 3;
+	}
+// 	else
+	{
+		*(bufferOut) = 255;
+		c -= 253 + (256 * 256);
+		*((unsigned __int32*)(bufferOut + 1)) = c;
+		return 5;
+	}
+}
+
 extern "C" __declspec(dllexport) __int32 blazer_stream_compress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, __int32 bufferInShift, unsigned char* bufferOut, __int32 bufferOutOffset, __int32* hashArr)
 {
 	int cntLit;
@@ -47,7 +77,7 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_compress_block(unsigned c
 	int iterMax = bufferInLength - 1;
 
 	int idxIn = bufferInOffset;
-	int lastProcessedIdxIn = idxIn + 3;
+	int lastProcessedIdxIn = idxIn;
 	int globalOfs = bufferInShift;
 	if (bufferInLength - idxIn > 3)
 	{
@@ -64,159 +94,141 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_compress_block(unsigned c
 		unsigned char elemP0 = bufferIn[idxIn];
 
 		mulEl = (mulEl << 8) | elemP0;
-		unsigned __int32 hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
+		unsigned __int32 hashKey = CALC_HASH(mulEl);
 		int hashVal = hashArr[hashKey] - globalOfs;
 		hashArr[hashKey] = idxIn + globalOfs;
 		int backRef = idxIn - hashVal;
 		int isBig = backRef < 257 ? 0 : 1;
-		if (hashVal > 0
-			&& backRef < MAX_BACK_REF
-			&& ((!isBig || bufferIn[hashVal + 1] == bufferIn[idxIn + 1])
-				&& mulEl == (unsigned __int32)((bufferIn[hashVal - 3] << 24) | (bufferIn[hashVal - 2] << 16) | (bufferIn[hashVal - 1] << 8) | bufferIn[hashVal - 0])))
+
+		if (hashVal == 0 
+			|| backRef >= MAX_BACK_REF
+			|| (backRef >= 257 && bufferIn[hashVal + 1] != bufferIn[idxIn + 1])
+			|| mulEl != (unsigned __int32)((bufferIn[hashVal - 3] << 24) | (bufferIn[hashVal - 2] << 16) | (bufferIn[hashVal - 1] << 8) | bufferIn[hashVal - 0]))
 		{
-			cntLit = idxIn - lastProcessedIdxIn;
-
-			hashVal++;
 			idxIn++;
-
-			while (idxIn < bufferInLength)
-			{
-				elemP0 = bufferIn[idxIn];
-				mulEl = (mulEl << 8) | elemP0;
-				hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-				hashArr[hashKey] = idxIn + globalOfs;
-
-				if (bufferIn[hashVal] == elemP0)
-				{
-					hashVal++;
-					idxIn++;
-				}
-				else break;
-			}
-
-			int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3/* - isBig*/;
-
-			if (backRef >= 256 + 1)
-			{
-				backRef -= 256 + 1;
-				*(bufferOut++) = (unsigned char)(((MIN(cntLit, 7) << 4) | MIN(seqLen, 15)) + 128);
-
-				*((unsigned __int16*)bufferOut) = backRef;
-				bufferOut += 2;
-			}
-			else
-			{
-				*(bufferOut++) = (unsigned char)((MIN(cntLit, 7) << 4) | MIN(seqLen, 15));
-
-				// 1 is always min, should not write it
-				*(bufferOut++) = (unsigned char)(backRef - 1);
-			}
-
-			if (cntLit >= 7)
-			{
-				__int32 c = cntLit - 7;
-				if (c < 253) *(bufferOut++) = (unsigned char)c;
-				else if (c < 253 + 256)
-				{
-					*(bufferOut++) = 253;
-					*(bufferOut++) = (unsigned char)(c - 253);
-				}
-				else if (c < 253 + (256 * 256))
-				{
-					*(bufferOut++) = 254;
-					c -= 253 + 256;
-					*((unsigned __int16*)bufferOut) = c;
-					bufferOut += 2;
-				}
-				else
-				{
-					*(bufferOut++) = 255;
-					c -= 253 + (256 * 256);
-					*((unsigned __int32*)bufferOut) = c;
-					bufferOut += 4;
-				}
-			}
-
-			if (seqLen >= 15)
-			{
-				__int32 c = seqLen - 15;
-				if (c < 253) *(bufferOut++) = (unsigned char)c;
-				else if (c < 253 + 256)
-				{
-					*(bufferOut++) = 253;
-					*(bufferOut++) = (unsigned char)(c - 253);
-				}
-				else if (c < 253 + (256 * 256))
-				{
-					*(bufferOut++) = 254;
-					c -= 253 + 256;
-					*((unsigned __int16*)bufferOut) = c;
-					bufferOut += 2;
-				}
-				else
-				{
-					*(bufferOut++) = 255;
-					c -= 253 + (256 * 256);
-					*((unsigned __int32*)bufferOut) = c;
-					bufferOut += 4;
-				}
-			}
-
-			bufferOut = copy_memory(bufferIn + lastProcessedIdxIn - 3, bufferOut, cntLit);
-
-			idxIn += 3;
-			lastProcessedIdxIn = idxIn;
-
-			if (idxIn < bufferInLength)
-			{
-				mulEl = (mulEl << 8) | bufferIn[idxIn - 2];
-				hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-				hashArr[hashKey] = idxIn - 2 + globalOfs;
-
-				mulEl = (mulEl << 8) | bufferIn[idxIn - 1];
-				hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-				hashArr[hashKey] = idxIn - 1 + globalOfs;
-			}
-
 			continue;
 		}
 
+		cntLit = idxIn - lastProcessedIdxIn - 3;
+
+		hashVal++;
 		idxIn++;
+
+		while (idxIn < bufferInLength)
+		{
+			elemP0 = bufferIn[idxIn];
+			mulEl = (mulEl << 8) | elemP0;
+			hashKey = CALC_HASH(mulEl);
+			hashArr[hashKey] = idxIn + globalOfs;
+
+			if (bufferIn[hashVal] == elemP0)
+			{
+				hashVal++;
+				idxIn++;
+			}
+			else break;
+		}
+
+		int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN;
+
+		if (backRef >= 256 + 1)
+		{
+			backRef -= 256 + 1;
+			if (cntLit < 7)
+			{
+				if (seqLen < 15)
+				{
+					*(bufferOut++) = (unsigned char)((cntLit << 4) | seqLen | 128);
+					*((unsigned __int16*)bufferOut) = backRef;bufferOut += 2;
+				}
+				else
+				{
+					*(bufferOut++) = (unsigned char)((cntLit << 4) | 15 | 128);
+					*((unsigned __int16*)bufferOut) = backRef;bufferOut += 2;
+					bufferOut += write_len(bufferOut, seqLen - 15);
+				}
+			}
+			else
+			{
+				if (seqLen < 15)
+				{
+					*(bufferOut++) = (unsigned char)((7 << 4) | seqLen | 128);
+					*((unsigned __int16*)bufferOut) = backRef;bufferOut += 2;
+					bufferOut += write_len(bufferOut, cntLit - 7);
+				}
+				else
+				{
+					*(bufferOut++) = (unsigned char)((7 << 4) | 15 | 128);
+					*((unsigned __int16*)bufferOut) = backRef;bufferOut += 2;
+					bufferOut += write_len(bufferOut, cntLit - 7);
+					bufferOut += write_len(bufferOut, seqLen - 15);
+				}
+			}
+		}
+		else
+		{
+			// 1 is always min, should not write it
+			backRef -= 1;
+			if (cntLit < 7)
+			{
+				if (seqLen < 15)
+				{
+					*(bufferOut++) = (unsigned char)((cntLit << 4) | seqLen);
+					*(bufferOut++) = (unsigned char)backRef;
+				}
+				else
+				{
+					*(bufferOut++) = (unsigned char)((cntLit << 4) | 15);
+					*(bufferOut++) = (unsigned char)backRef;
+					bufferOut += write_len(bufferOut, seqLen - 15);
+				}
+			}
+			else
+			{
+				if (seqLen < 15)
+				{
+					*(bufferOut++) = (unsigned char)((7 << 4) | seqLen);
+					*(bufferOut++) = (unsigned char)backRef;
+					bufferOut += write_len(bufferOut, cntLit - 7);
+				}
+				else
+				{
+					*(bufferOut++) = (unsigned char)((7 << 4) | 15);
+					*(bufferOut++) = (unsigned char)backRef;
+					bufferOut += write_len(bufferOut, cntLit - 7);
+					bufferOut += write_len(bufferOut, seqLen - 15);
+				}
+			}
+		}
+
+		bufferOut = copy_memory(bufferIn + lastProcessedIdxIn, bufferOut, cntLit);
+
+		lastProcessedIdxIn = idxIn;
+		idxIn += 3;
+
+		if (idxIn < bufferInLength)
+		{
+			mulEl = (mulEl << 8) | bufferIn[idxIn - 2];
+			hashKey = CALC_HASH(mulEl);
+			hashArr[hashKey] = idxIn - 2 + globalOfs;
+
+			mulEl = (mulEl << 8) | bufferIn[idxIn - 1];
+			hashKey = CALC_HASH(mulEl);
+			hashArr[hashKey] = idxIn - 1 + globalOfs;
+		}
 	}
 
-	cntLit = bufferInLength - lastProcessedIdxIn + 3;
+	cntLit = bufferInLength - lastProcessedIdxIn;
 	idxIn = bufferInLength;
 
 	if (cntLit > 0)
 	{
-		*(bufferOut++) = (unsigned char)(MIN(127, cntLit) + 128);
+		*(bufferOut++) = (unsigned char)(MIN(127, cntLit) | 128);
 		*((unsigned __int16*)bufferOut) = 0xffff;
 		bufferOut += 2;
 
 		if (cntLit >= 127)
-		{
-			__int32 c = cntLit - 127;
-			if (c < 253) *(bufferOut++) = (unsigned char)c;
-			else if (c < 253 + 256)
-			{
-				*(bufferOut++) = 253;
-				*(bufferOut++) = (unsigned char)(c - 253);
-			}
-			else if (c < 253 + (256 * 256))
-			{
-				*(bufferOut++) = 254;
-				c -= 253 + 256;
-				*((unsigned __int16*)bufferOut) = c;
-				bufferOut += 2;
-			}
-			else
-			{
-				*(bufferOut++) = 255;
-				c -= 253 + (256 * 256);
-				*((unsigned __int32*)bufferOut) = c;
-				bufferOut += 4;
-			}
-		}
+			bufferOut += write_len(bufferOut, cntLit - 127);
 
 		while (cntLit > 0)
 		{
@@ -314,7 +326,7 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned
 		bufferOut = copy_memory(bufferIn, bufferOut, litCnt);
 		bufferIn += litCnt;
 
-		if (backRef >= seqCnt && seqCnt > 8)
+		if (backRef >= seqCnt /*&& seqCnt > sizeof(int)*/)
 		{
 			bufferOut = copy_memory(bufferOut - backRef, bufferOut, seqCnt);
 		}

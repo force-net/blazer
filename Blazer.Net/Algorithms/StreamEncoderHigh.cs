@@ -11,7 +11,7 @@ namespace Force.Blazer.Algorithms
 		private const int HASH_TABLE_BITS = 16;
 		private const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
 
-		private const int HASHARR_CNT = 8;
+		private const int HASHARR_CNT = 16;
 
 		private const int MIN_SEQ_LEN = 4;
 		
@@ -42,14 +42,15 @@ namespace Force.Blazer.Algorithms
 			return CompressBlockHighExternal(bufferIn, bufferInOffset, bufferInLength, bufferInShift, bufferOut, bufferOutOffset, _hashArr2, _hashArrPos);
 		}
 
-		private static int FindMaxSequence(byte[] bufferIn, int iterMax, int idxIn, int valIn)
+		private static int FindMaxSequence(byte[] bufferIn, int iterMax, int a, int b, int minValToCompare)
 		{
-			if (idxIn >= iterMax) return -1;
+			if (a + minValToCompare >= iterMax) return -1;
+			if (bufferIn[a + minValToCompare] != bufferIn[b + minValToCompare]) return -1;
 			var total = 0;
-			while (idxIn < iterMax && bufferIn[idxIn] == bufferIn[valIn])
+			while (a < iterMax && bufferIn[a] == bufferIn[b])
 			{
-				idxIn++;
-				valIn++;
+				a++;
+				b++;
 				total++;
 			}
 
@@ -87,16 +88,18 @@ namespace Force.Blazer.Algorithms
 
 				var min = Math.Max(0, hashArrPos[hashKey] - HASHARR_CNT);
 				var cnt = 0;
+				var cntToCmp = 0;
 				for (var i = hashArrPos[hashKey] - 1; i >= min; i--)
 				{
 					var hashValLocal = hashArr[i & (HASHARR_CNT - 1)][hashKey] - globalOfs;
 					int backRefLocal = idxIn - hashValLocal;
 					if (backRefLocal < MAX_BACK_REF)
 					{
-						var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn - 3, hashValLocal - 3) + (backRefLocal < 257 ? 1 : 0);
+						var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn - 3, hashValLocal - 3, cntToCmp) + (backRefLocal < 257 ? 1 : 0);
 						if (cntLocal > cnt)
 						{
 							cnt = cntLocal;
+							cntToCmp = cnt - 1;
 							hashVal = hashValLocal;
 						}
 					} 
@@ -114,16 +117,14 @@ namespace Force.Blazer.Algorithms
 						int backRefLocal = idxIn - hashValLocal;
 						if (backRefLocal < MAX_BACK_REF)
 						{
-							var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn + 1 - 3, hashValLocal - 3) + (backRefLocal < 257 ? 1 : 0) - 0;
+							var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn + 1 - 3, hashValLocal - 3, cnt - 1) + (backRefLocal < 257 ? 1 : 0);
 							if (cntLocal > cnt)
 							{
-								// hashVal = 0;
 								cnt = 0;
 								break;
 							}
 						}
-						else
-							break;
+						else break;
 					}
 				}
 

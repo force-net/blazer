@@ -95,9 +95,9 @@ namespace Force.Blazer.Benchmark
 			NativeHelper.SetNativeImplementation(false);
 			
 			DoBench("Stream/S", array,  x => new BlazerStreamCompressionStream(x), x => new BlazerDecompressionStream(x));
-			DoBench("Stream/SH", array, x => new BlazerBaseCompressionStream(x, new StreamEncoderHigh(), BlazerFlags.DefaultStream), x => new BlazerDecompressionStream(x));
 			NativeHelper.SetNativeImplementation(true);
-			DoBench("Stream/N", array, x => new BlazerStreamCompressionStream(x), x => new BlazerDecompressionStream(x));
+			DoBench("Stream/SH", array, x => new BlazerBaseCompressionStream(x, new StreamEncoderHigh(), BlazerFlags.DefaultStream), x => new BlazerDecompressionStream(x));
+			DoBench("Stream/N", array, x => new BlazerStreamCompressionStream(x, BlazerFlags.DefaultStream), x => new BlazerDecompressionStream(x));
 
 			NativeHelper.SetNativeImplementation(false);
 			DoBench("Block/S ", array, x => new BlazerBlockCompressionStream(x), x => new BlazerDecompressionStream(x));
