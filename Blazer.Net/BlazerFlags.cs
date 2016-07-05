@@ -30,8 +30,12 @@ namespace Force.Blazer
 		RespectFlush = 2048,
 
 		EncryptInner = 4096,
-		// EncryptOuter = 8192,
-		// AddRecoveryInfo = 16384,
+		NotImplementedEncryptOuter = 8192,
+		NotImplementedAddRecoveryInfo = 16384,
+
+		NoFileInfo = 0,
+		OnlyOneFile = 32768,
+		NotImplementedMultipleFiles = 65536,
 
 		Default = IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush,
 		DefaultStream = Default | InBlockSize64K,

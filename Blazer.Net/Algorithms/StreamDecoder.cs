@@ -14,11 +14,11 @@ namespace Force.Blazer.Algorithms
 
 		private int _innerBufferLen = 0;
 
-		private Func<byte[], Tuple<int, bool, bool>> _needNewBlock;
+		private Func<byte[], Tuple<int, byte, bool>> _needNewBlock;
 
 		private byte[] _inBuffer;
 
-		public virtual void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, bool, bool>> needNewBlock)
+		public virtual void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> needNewBlock)
 		{
 			_innerBufferMaxLen = maxUncompressedBlockSize + StreamEncoder.MAX_BACK_REF + 1;
 			_innerBuffer = new byte[_innerBufferMaxLen];
@@ -32,7 +32,7 @@ namespace Force.Blazer.Algorithms
 			{
 				var res = _needNewBlock(_inBuffer);
 				if (!res.Item3) return 0;
-				ProcessBlock(_inBuffer, res.Item1, res.Item2);
+				ProcessBlock(_inBuffer, res.Item1, res.Item2 != 0x00);
 			}
 
 			count = Math.Min(_innerBufferLen - _innerBufferPos, count);

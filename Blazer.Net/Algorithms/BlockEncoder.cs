@@ -23,7 +23,7 @@ namespace Force.Blazer.Algorithms
 
 		private int _bufferInPos;
 
-		private Action<byte[], int, bool> _onBlockPrepared;
+		private Action<byte[], int, byte> _onBlockPrepared;
 
 		public void Write(byte[] buffer, int offset, int count)
 		{
@@ -52,17 +52,17 @@ namespace Force.Blazer.Algorithms
 			if (cnt >= _bufferInPos)
 			{
 				Buffer.BlockCopy(_bufferIn, 0, _bufferOut, _bufferOutHeaderSize, _bufferInPos);
-				_onBlockPrepared(_bufferOut, _bufferInPos + _bufferOutHeaderSize, false);
+				_onBlockPrepared(_bufferOut, _bufferInPos + _bufferOutHeaderSize, 0x00);
 			}
 			else
 			{
-				_onBlockPrepared(_bufferOut, cnt, true);
+				_onBlockPrepared(_bufferOut, cnt, (byte)GetAlgorithmId());
 			}
 
 			_bufferInPos = 0;
 		}
 
-		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
+		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared)
 		{
 			_maxInBlockSize = maxInBlockSize;
 			_bufferIn = new byte[_maxInBlockSize];

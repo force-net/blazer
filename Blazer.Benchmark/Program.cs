@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
 using Force.Blazer.Native;
 
@@ -91,25 +90,25 @@ namespace Force.Blazer.Benchmark
 		{
 			Console.WriteLine();
 			Console.WriteLine("Testing " + title);
-			DoBench("NoCompr ", array, x => new BlazerNoCompressionStream(x), x => new BlazerDecompressionStream(x));
+			DoBench("NoCompr ", array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateNoCompression()), x => new BlazerOutputStream(x));
 			NativeHelper.SetNativeImplementation(false);
-			
-			DoBench("Stream/S", array,  x => new BlazerStreamCompressionStream(x), x => new BlazerDecompressionStream(x));
+
+			DoBench("Stream/S", array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateStream()), x => new BlazerOutputStream(x));
 			NativeHelper.SetNativeImplementation(true);
-			DoBench("Stream/SH", array, x => new BlazerBaseCompressionStream(x, new StreamEncoderHigh(), BlazerFlags.DefaultStream), x => new BlazerDecompressionStream(x));
-			DoBench("Stream/N", array, x => new BlazerStreamCompressionStream(x, BlazerFlags.DefaultStream), x => new BlazerDecompressionStream(x));
+			DoBench("Stream/SH", array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateStreamHigh()), x => new BlazerOutputStream(x));
+			DoBench("Stream/N", array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateStream()), x => new BlazerOutputStream(x));
 
 			NativeHelper.SetNativeImplementation(false);
-			DoBench("Block/S ", array, x => new BlazerBlockCompressionStream(x), x => new BlazerDecompressionStream(x));
+			DoBench("Block/S ", array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateBlock()), x => new BlazerOutputStream(x));
 			NativeHelper.SetNativeImplementation(true);
-			DoBench("Block/N ", array, x => new BlazerBlockCompressionStream(x), x => new BlazerDecompressionStream(x));
+			DoBench("Block/N ", array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateBlock()), x => new BlazerOutputStream(x));
 
 			DoBench("LZ4     ", array, x => new LZ4Stream(x, LZ4StreamMode.Compress), x => new LZ4Stream(x, LZ4StreamMode.Decompress));
 			DoBench("LZ4/HC  ", array, x => new LZ4Stream(x, LZ4StreamMode.Compress, LZ4StreamFlags.HighCompression), x => new LZ4Stream(x, LZ4StreamMode.Decompress));
 			DoBench("Snappy  ", array, x => new SnappyStream(x, CompressionMode.Compress), x => new SnappyStream(x, CompressionMode.Decompress));
 			DoBench("StdGZip ", array, x => new GZipStream(x, CompressionMode.Compress), x => new GZipStream(x, CompressionMode.Decompress));
 			// very slow for usual running
-			// DoBench("BZip2    ", array, x => new BZip2OutputStream(x), x => new BZip2InputStream(x));
+			DoBench("BZip2    ", array, x => new BZip2OutputStream(x), x => new BZip2InputStream(x));
 			DoBenchQuickLZ("QuickLZ/1", 1, array);
 			DoBenchQuickLZ("QuickLZ/3", 3, array);
 		}
@@ -171,9 +170,12 @@ namespace Force.Blazer.Benchmark
 			while (blockSize < 1 << 21)
 			{
 				Console.WriteLine(blockSize);
-				DoBenchBlock("Stream   ", blockSize, array, x => new BlazerStreamCompressionStream(x, BlazerFlags.DefaultBlock), x => new BlazerDecompressionStream(x));
-				DoBenchBlock("Stream/H ", blockSize, array, x => new BlazerBaseCompressionStream(x, new StreamEncoderHigh(), BlazerFlags.DefaultBlock), x => new BlazerDecompressionStream(x));
-				DoBenchBlock("Block    ", blockSize, array, x => new BlazerBlockCompressionStream(x), x => new BlazerDecompressionStream(x));
+				BlazerCompressionOptions streamOptions = BlazerCompressionOptions.CreateStream();
+				// max block size for this test
+				streamOptions.MaxBlockSize = 1 << 20;
+				DoBenchBlock("Stream   ", blockSize, array, x => new BlazerInputStream(x, streamOptions), x => new BlazerOutputStream(x));
+				DoBenchBlock("Stream/H ", blockSize, array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateStreamHigh()), x => new BlazerOutputStream(x));
+				DoBenchBlock("Block    ", blockSize, array, x => new BlazerInputStream(x, BlazerCompressionOptions.CreateNoCompression()), x => new BlazerOutputStream(x));
 				DoBenchBlock("LZ4      ", blockSize, array, x => new LZ4Stream(x, LZ4StreamMode.Compress), x => new LZ4Stream(x, LZ4StreamMode.Decompress));
 				DoBenchBlock("LZ4/HC   ", blockSize, array, x => new LZ4Stream(x, LZ4StreamMode.Compress, LZ4StreamFlags.HighCompression), x => new LZ4Stream(x, LZ4StreamMode.Decompress));
 				DoBenchBlock("Snappy   ", blockSize, array, x => new SnappyStream(x, CompressionMode.Compress), x => new SnappyStream(x, CompressionMode.Decompress));

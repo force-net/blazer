@@ -8,7 +8,7 @@ namespace Force.Blazer.Algorithms
 
 		void CompressAndWrite();
 
-		void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared);
+		void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared);
 
 		BlazerAlgorithm GetAlgorithmId();
 	}

@@ -10,7 +10,7 @@ namespace Force.Blazer.Algorithms
 
 		private int _innerBufferLen;
 
-		private Func<byte[], Tuple<int, bool, bool>> _needNewBlock;
+		private Func<byte[], Tuple<int, byte, bool>> _needNewBlock;
 
 		public int Read(byte[] buffer, int offset, int count)
 		{
@@ -28,7 +28,7 @@ namespace Force.Blazer.Algorithms
 			return count;
 		}
 
-		public void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, bool, bool>> getNextBlock)
+		public void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> getNextBlock)
 		{
 			_innerBuffer = new byte[maxUncompressedBlockSize];
 			_needNewBlock = getNextBlock;

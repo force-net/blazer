@@ -19,7 +19,7 @@ namespace Force.Blazer.Algorithms
 
 		private byte[] _inBuffer;
 
-		private Func<byte[], Tuple<int, bool, bool>> _needNewBlock;
+		private Func<byte[], Tuple<int, byte, bool>> _needNewBlock;
 
 		private int _maxUncompressedBlockSize;
 
@@ -29,7 +29,7 @@ namespace Force.Blazer.Algorithms
 			{
 				var res = _needNewBlock(_inBuffer);
 				if (!res.Item3) return 0;
-				ProcessBlock(_inBuffer, res.Item1, res.Item2);
+				ProcessBlock(_inBuffer, res.Item1, res.Item2 != 0x00);
 			}
 
 			count = Math.Min(_innerBufferLen - _innerBufferPos, count);
@@ -52,7 +52,7 @@ namespace Force.Blazer.Algorithms
 			}
 		}
 
-		public void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, bool, bool>> getNextBlock)
+		public void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> getNextBlock)
 		{
 			_innerBuffer = new byte[maxUncompressedBlockSize];
 			_maxUncompressedBlockSize = maxUncompressedBlockSize;

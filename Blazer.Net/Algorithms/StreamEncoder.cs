@@ -38,9 +38,9 @@ namespace Force.Blazer.Algorithms
 
 		private int _bufferOutHeaderSize;
 
-		private Action<byte[], int, bool> _onBlockPrepared;
+		private Action<byte[], int, byte> _onBlockPrepared;
 
-		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
+		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared)
 		{
 			_maxInBlockSize = maxInBlockSize;
 			_innerBufferSize = MAX_BACK_REF + maxInBlockSize;
@@ -93,12 +93,12 @@ namespace Force.Blazer.Algorithms
 			{
 				Buffer.BlockCopy(_bufferIn, _bufferInPosFact, _bufferOut, _bufferOutIdx, _bufferInLength);
 				_bufferOutIdx += _bufferInLength;
-				_onBlockPrepared(_bufferOut, _bufferOutIdx, false);
+				_onBlockPrepared(_bufferOut, _bufferOutIdx, 0x00);
 			}
 			else
 			{
 				_bufferOutIdx = cnt;
-				_onBlockPrepared(_bufferOut, _bufferOutIdx, true);
+				_onBlockPrepared(_bufferOut, _bufferOutIdx, (byte)GetAlgorithmId());
 			}
 
 			_bufferInPosFact += _bufferInLength;

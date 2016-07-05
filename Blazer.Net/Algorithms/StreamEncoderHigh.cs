@@ -22,7 +22,7 @@ namespace Force.Blazer.Algorithms
 
 		private int[] _hashArrPos;
 
-		public override void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
+		public override void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared)
 		{
 			base.Init(maxInBlockSize, additionalHeaderSizeForOut, onBlockPrepared);
 			_hashArr2 = new int[HASHARR_CNT][];

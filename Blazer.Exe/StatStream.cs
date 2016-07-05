@@ -31,7 +31,7 @@ namespace Force.Blazer.Exe
 
 		public override void Close()
 		{
-			base.Close();
+			_baseStream.Close();
 			DoStats();
 		}
 

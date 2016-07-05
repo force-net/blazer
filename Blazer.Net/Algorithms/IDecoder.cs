@@ -6,7 +6,7 @@ namespace Force.Blazer.Algorithms
 	{
 		int Read(byte[] buffer, int offset, int count);
 
-		void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, bool, bool>> getNextBlock);
+		void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> getNextBlock);
 
 		BlazerAlgorithm GetAlgorithmId();
 	}

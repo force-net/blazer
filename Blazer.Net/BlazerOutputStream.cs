@@ -4,10 +4,11 @@ using System.IO;
 using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
 using Force.Blazer.Encyption;
+using Force.Blazer.Helpers;
 
 namespace Force.Blazer
 {
-	public class BlazerDecompressionStream : Stream
+	public class BlazerOutputStream : Stream
 	{
 		#region Stream stub
 
@@ -89,9 +90,21 @@ namespace Force.Blazer
 
 		private byte _algorithmId;
 
+		private bool _shouldHaveFileInfo;
+
 		private readonly NullDecryptHelper _decryptHelper;
 
-		public BlazerDecompressionStream(Stream innerStream, IDecoder decoder, BlazerFlags flags, string password = null)
+		private BlazerFileInfo _fileInfo;
+
+		public BlazerFileInfo FileInfo
+		{
+			get
+			{
+				return _fileInfo;
+			}
+		}
+
+		public BlazerOutputStream(Stream innerStream, IDecoder decoder, BlazerFlags flags, string password = null)
 		{
 			_innerStream = innerStream;
 			if (!_innerStream.CanRead)
@@ -116,12 +129,12 @@ namespace Force.Blazer
 			}
 		}
 
-		public BlazerDecompressionStream(Stream innerStream, BlazerAlgorithm algorithm, BlazerFlags flags, string password = null)
+		public BlazerOutputStream(Stream innerStream, BlazerAlgorithm algorithm, BlazerFlags flags, string password = null)
 			: this(innerStream, EncoderDecoderFactory.GetDecoder(algorithm), flags, password)
 		{
 		}
 
-		public BlazerDecompressionStream(Stream innerStream, string password = null)
+		public BlazerOutputStream(Stream innerStream, string password = null)
 		{
 			_innerStream = innerStream;
 			_innerStream = innerStream;
@@ -130,6 +143,42 @@ namespace Force.Blazer
 			if (!string.IsNullOrEmpty(password))
 				_decryptHelper = new DecryptHelper(password);
 			ReadAndValidateHeader();
+
+			// todo: refactor this
+			if (_shouldHaveFileInfo)
+			{
+				var inLength = GetNextChunkHeader(false);
+				if (inLength == 0)
+					throw new InvalidOperationException("Missing file info");
+
+				var inLengthOrig = inLength;
+				if (_decryptHelper != null)
+					inLength = _decryptHelper.AdjustLength(inLength);
+
+				if (_encodingType != 0xfd)
+					throw new InvalidOperationException("Invalid header data");
+
+				var fileBuf = new byte[inLength];
+
+				if (!EnsureRead(fileBuf, 0, inLength))
+					throw new InvalidOperationException("Invalid block data");
+
+				if (_includeCrc)
+				{
+					var realCrc = Crc32C.Calculate(fileBuf, 0, inLength);
+
+					if (realCrc != _passedCrc)
+						throw new InvalidOperationException("Invalid CRC32C data in passed block. It seems, data error is occured.");
+				}
+
+				if (_decryptHelper != null)
+				{
+					var decrypted = _decryptHelper.Decrypt(fileBuf, 0, inLength);
+					Buffer.BlockCopy(decrypted, 0, fileBuf, 0, inLengthOrig);
+				}
+
+				_fileInfo = FileHeaderHelper.ParseFileHeader(fileBuf);
+			}
 		}
 
 		protected override void Dispose(bool disposing)
@@ -157,10 +206,11 @@ namespace Force.Blazer
 
 			_decoder = EncoderDecoderFactory.GetDecoder((BlazerAlgorithm)((((uint)flags) >> 4) & 15));
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);
-			Func<byte[], Tuple<int, bool, bool>> nextChunk = GetNextChunk;
+			Func<byte[], Tuple<int, byte, bool>> nextChunk = GetNextChunk;
 			_algorithmId = (byte)_decoder.GetAlgorithmId();
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
+			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;
 			if ((flags & BlazerFlags.EncryptInner) != 0)
 			{
 				if (_decryptHelper == null)
@@ -197,7 +247,7 @@ namespace Force.Blazer
 
 		private uint _passedCrc;
 
-		private int GetNextChunkHeader()
+		private int GetNextChunkHeader(bool validateEncodingType)
 		{
 			// end of stream
 			if (!EnsureRead(_sizeBlock, 0, 4)) return 0;
@@ -211,8 +261,9 @@ namespace Force.Blazer
 				return 0;
 			}
 
-			if (_encodingType != 0 && _encodingType != _algorithmId)
+			if (_encodingType != 0 && _encodingType != _algorithmId && validateEncodingType)
 				throw new InvalidOperationException("Invalid header");
+
 			var inLength = ((_sizeBlock[1] << 0) | (_sizeBlock[2] << 8) | _sizeBlock[3] << 16) + 1;
 			if (inLength > _maxUncompressedBlockSize)
 				throw new InvalidOperationException("Invalid block size");
@@ -227,10 +278,10 @@ namespace Force.Blazer
 			return inLength;
 		}
 
-		private Tuple<int, bool, bool> GetNextChunk(byte[] inBuffer)
+		private Tuple<int, byte, bool> GetNextChunk(byte[] inBuffer)
 		{
-			var inLength = GetNextChunkHeader();
-			if (inLength == 0) return new Tuple<int, bool, bool>(0, false, false);
+			var inLength = GetNextChunkHeader(true);
+			if (inLength == 0) return new Tuple<int, byte, bool>(0, 0x00, false);
 
 			if (!EnsureRead(inBuffer, 0, inLength))
 				throw new InvalidOperationException("Invalid block data");
@@ -243,13 +294,13 @@ namespace Force.Blazer
 					throw new InvalidOperationException("Invalid CRC32C data in passed block. It seems, data error is occured.");
 			}
 
-			return new Tuple<int, bool, bool>(inLength, _encodingType != 0x00, true);
+			return new Tuple<int, byte, bool>(inLength, _encodingType, true);
 		}
 
-		private Tuple<int, bool, bool> GetNextChunkEncrypted(byte[] inBuffer)
+		private Tuple<int, byte, bool> GetNextChunkEncrypted(byte[] inBuffer)
 		{
-			var inLength = GetNextChunkHeader();
-			if (inLength == 0) return new Tuple<int, bool, bool>(0, false, false);
+			var inLength = GetNextChunkHeader(true);
+			if (inLength == 0) return new Tuple<int, byte, bool>(0, 0x00, false);
 
 			var inLengthOrig = inLength;
 			inLength = _decryptHelper.AdjustLength(inLength);
@@ -268,7 +319,7 @@ namespace Force.Blazer
 			var decrypted = _decryptHelper.Decrypt(inBuffer, 0, inLength);
 			Buffer.BlockCopy(decrypted, 0, inBuffer, 0, inLengthOrig);
 
-			return new Tuple<int, bool, bool>(inLengthOrig, _encodingType != 0x00, true);
+			return new Tuple<int, byte, bool>(inLengthOrig, _encodingType, true);
 		}
 
 		private bool EnsureRead(byte[] buffer, int offset, int size)
