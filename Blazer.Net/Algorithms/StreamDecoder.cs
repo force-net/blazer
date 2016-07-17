@@ -94,6 +94,7 @@ namespace Force.Blazer.Algorithms
 						seqCnt = 0;
 						litCnt = elem - 128;
 						litCntFirst = litCnt == 127 ? 7 : 0;
+						// backRef = 0;
 					}
 				}
 				else
@@ -142,6 +143,10 @@ namespace Force.Blazer.Algorithms
 				{
 					while (--litCnt >= 0) bufferOut[idxOut++] = bufferIn[idxIn++];
 				}
+
+				// exception wil be thrown anyway, but this check decreases decompression speed
+				// if (idxOut - backRef < 0)
+				//	throw new InvalidOperationException("Invalid stream structure");
 
 				if (backRef >= seqCnt && seqCnt >= 8)
 				{

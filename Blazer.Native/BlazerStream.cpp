@@ -20,7 +20,7 @@ inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst, __int3
 		count--;
 	}*/
 
-	while (count >= sizeof(int))
+	while (count > 0)
 	{
 		*(int*)dst = *(int*)src;
 		dst += sizeof(int);
@@ -28,13 +28,31 @@ inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst, __int3
 		count -= sizeof(int);
 	}
 	
-	while (count-- > 0)
+	dst += count;
+
+	/*while (count-- > 0)
 	{
 		*dst++ = *src++;
-	}
+	}*/
 
 	return dst;
 }
+
+inline unsigned char* copy_memory4(unsigned char* src, unsigned char* dst, __int32 count)
+{
+	while (count > 0)
+	{
+		*(__int32*)dst = *(__int32*)src;
+		dst += sizeof(__int32);
+		src += sizeof(__int32);
+		count -= sizeof(__int32);
+	}
+	
+	dst += count;
+
+	return dst;
+}
+
 
 int __inline write_len(unsigned char* bufferOut, int c)
 {
@@ -263,7 +281,6 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned
 		if (elem >= 128)
 		{
 			backRef = *(unsigned __int16*)(bufferIn) + 257;
-			seqCnt = seqCntFirst + /*5*/ 4;
 			bufferIn += 2;
 			if (backRef == 0xffff + 257)
 			{
@@ -271,6 +288,11 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned
 				seqCntFirst = 0;
 				litCnt = elem - 128;
 				litCntFirst = litCnt == 127 ? 7 : 0;
+				backRef = 0;
+			}
+			else 
+			{
+				seqCnt = seqCntFirst + /*5*/ 4;
 			}
 		}
 		else
@@ -318,17 +340,24 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned
 
 		unsigned char* maxOutLength = bufferOut + litCnt + seqCnt;
 		if (maxOutLength >= bufferOutEnd)
-		{
 			return -1;
-			// throw new IndexOutOfRangeException("Invalid stream structure");
-		}
+
+		if (bufferIn + litCnt > bufferInEnd)
+			return -2;
 
 		bufferOut = copy_memory(bufferIn, bufferOut, litCnt);
 		bufferIn += litCnt;
 
-		if (backRef >= seqCnt /*&& seqCnt > sizeof(int)*/)
+		if (bufferOut - backRef < bufferOutOrig)
+			return -3;
+
+		if (backRef >= sizeof(int)/*&& seqCnt > sizeof(int)*/)
 		{
 			bufferOut = copy_memory(bufferOut - backRef, bufferOut, seqCnt);
+		}
+		else if (backRef >= 4) 
+		{
+			bufferOut = copy_memory4(bufferOut - backRef, bufferOut, seqCnt);
 		}
 		else
 		{

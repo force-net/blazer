@@ -40,12 +40,17 @@ namespace Force.Blazer.Algorithms
 
 		private Action<byte[], int, byte> _onBlockPrepared;
 
+		protected virtual int GetAdditionalInSize()
+		{
+			return 0;
+		}
+
 		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared)
 		{
 			_maxInBlockSize = maxInBlockSize;
 			_innerBufferSize = MAX_BACK_REF + maxInBlockSize;
-			_bufferIn = new byte[_innerBufferSize + 1];
-			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3 + additionalHeaderSizeForOut];
+			_bufferIn = new byte[_innerBufferSize + 1 + GetAdditionalInSize()];
+			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3 + additionalHeaderSizeForOut + GetAdditionalInSize()];
 			_bufferOutIdx = additionalHeaderSizeForOut;
 			_bufferOutHeaderSize = additionalHeaderSizeForOut;
 			_onBlockPrepared = onBlockPrepared;

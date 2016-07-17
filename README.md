@@ -44,8 +44,8 @@ Table version:
 
 Name                | Rate      | Compression | Decompression 
 --------------------|-----------|-------------|---------------------------
-Blazer Stream       | 42.742%   | 181 MB/s    | 573 MB/s
-Blazer Stream High  | 37.608%   | 20  MB/s    | 598 MB/s
+Blazer Stream       | 42.742%   | 189 MB/s    | 688 MB/s
+Blazer Stream High  | 37.608%   | 20  MB/s    | 735 MB/s
 Blazer Block        | 40.974%   | 222 MB/s    | 278 MB/s
 LZ4                 | 48.028%   | 281 MB/s    | 986 MB/s
 LZ4 HC              | 36.990%   | 28  MB/s    | 1182 MB/s

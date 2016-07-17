@@ -8,17 +8,10 @@ namespace Force.Blazer.Algorithms
 		private static extern int blazer_stream_compress_block(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, int globalOffset, byte[] bufferOut, int bufferOutOffset, int[] hashArr);
 
-		/*private GCHandle _bufferInHandle;
-		private GCHandle _bufferOutHandle;
-		private GCHandle _hashArrHandle;
-
-		public override void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, bool> onBlockPrepared)
+		protected override int GetAdditionalInSize()
 		{
-			base.Init(maxInBlockSize, additionalHeaderSizeForOut, onBlockPrepared);
-			_bufferInHandle = GCHandle.Alloc(_bufferIn, GCHandleType.Pinned);
-			_bufferOutHandle = GCHandle.Alloc(_bufferOut, GCHandleType.Pinned);
-			_hashArrHandle = GCHandle.Alloc(_hashArr, GCHandleType.Pinned);
-		}*/
+			return 8;
+		}
 
 		protected override int CompressBlock(
 			byte[] bufferIn,
@@ -37,13 +30,5 @@ namespace Force.Blazer.Algorithms
 				bufferOutOffset,
 				_hashArr);
 		}
-
-		/*public override void Dispose()
-		{
-			_bufferInHandle.Free();
-			_bufferOutHandle.Free();
-			_hashArrHandle.Free();
-			base.Dispose();
-		}*/
 	}
 }
