@@ -109,7 +109,7 @@ namespace Force.Blazer
 			}
 		}
 
-		public static int DefaultBlockBlockSize
+		public static int DefaultStreamBlockSize
 		{
 			get
 			{
@@ -117,7 +117,7 @@ namespace Force.Blazer
 			}
 		}
 
-		public static int DefaultStreamBlockSize
+		public static int DefaultBlockBlockSize
 		{
 			get
 			{

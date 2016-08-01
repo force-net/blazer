@@ -14,61 +14,18 @@ namespace Force.Blazer.Algorithms
 		private int _maxInBlockSize;
 
 		[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Reviewed. Suppression is OK here.")]
-		protected byte[] _bufferIn;
-
-		[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Reviewed. Suppression is OK here.")]
 		protected byte[] _bufferOut;
 
-		private int _bufferOutHeaderSize;
-
-		private int _bufferInPos;
-
-		private Action<byte[], int, byte> _onBlockPrepared;
-
-		public void Write(byte[] buffer, int offset, int count)
+		public BufferInfo Encode(byte[] buffer, int offset, int length)
 		{
-			while (count > 0)
-			{
-				var toCopy = Math.Min(count, _maxInBlockSize - _bufferInPos);
-				Buffer.BlockCopy(buffer, offset, _bufferIn, _bufferInPos, toCopy);
-				_bufferInPos += toCopy;
-
-				if (_bufferInPos >= _maxInBlockSize)
-				{
-					CompressAndWrite();
-				}
-
-				count -= toCopy;
-				offset += toCopy;
-			}
+			var cnt = CompressBlock(buffer, offset, length, _bufferOut, 0);
+			return new BufferInfo(_bufferOut, 0, cnt);
 		}
 
-		public void CompressAndWrite()
-		{
-			// nothing to do
-			if (_bufferInPos == 0) return;
-
-			var cnt = CompressBlock(_bufferIn, 0, _bufferInPos, _bufferOut, _bufferOutHeaderSize);
-			if (cnt >= _bufferInPos)
-			{
-				Buffer.BlockCopy(_bufferIn, 0, _bufferOut, _bufferOutHeaderSize, _bufferInPos);
-				_onBlockPrepared(_bufferOut, _bufferInPos + _bufferOutHeaderSize, 0x00);
-			}
-			else
-			{
-				_onBlockPrepared(_bufferOut, cnt, (byte)GetAlgorithmId());
-			}
-
-			_bufferInPos = 0;
-		}
-
-		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared)
+		public virtual void Init(int maxInBlockSize)
 		{
 			_maxInBlockSize = maxInBlockSize;
-			_bufferIn = new byte[_maxInBlockSize];
-			_bufferOutHeaderSize = additionalHeaderSizeForOut;
-			_onBlockPrepared = onBlockPrepared;
-			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3 + additionalHeaderSizeForOut];
+			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3];
 		}
 
 		public virtual int CompressBlock(

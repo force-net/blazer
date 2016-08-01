@@ -1,37 +1,14 @@
-﻿using System;
-
-namespace Force.Blazer.Algorithms
+﻿namespace Force.Blazer.Algorithms
 {
 	public class NoCompressionDecoder : IDecoder
 	{
-		private byte[] _innerBuffer;
-
-		private int _innerBufferPos;
-
-		private int _innerBufferLen;
-
-		private Func<byte[], Tuple<int, byte, bool>> _needNewBlock;
-
-		public int Read(byte[] buffer, int offset, int count)
+		public BufferInfo Decode(byte[] buffer, int offset, int length, bool isCompressed)
 		{
-			if (_innerBufferPos == _innerBufferLen)
-			{
-				var res = _needNewBlock(_innerBuffer);
-				if (!res.Item3) return 0;
-				_innerBufferPos = 0;
-				_innerBufferLen = res.Item1;
-			}
-
-			count = Math.Min(_innerBufferLen - _innerBufferPos, count);
-			Buffer.BlockCopy(_innerBuffer, _innerBufferPos, buffer, offset, count);
-			_innerBufferPos += count;
-			return count;
+			return new BufferInfo(buffer, offset, length);
 		}
 
-		public void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> getNextBlock)
+		public void Init(int maxUncompressedBlockSize)
 		{
-			_innerBuffer = new byte[maxUncompressedBlockSize];
-			_needNewBlock = getNextBlock;
 		}
 
 		public BlazerAlgorithm GetAlgorithmId()

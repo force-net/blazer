@@ -94,6 +94,12 @@ namespace Force.Blazer
 
 		private byte[] _header;
 
+		private readonly byte[] _blockHeader;
+
+		private readonly byte[] _innerBuffer;
+
+		private int _innerBufferPos;
+
 		private readonly byte[] _fileInfoHeader;
 
 		private readonly NullEncryptHelper _encryptHelper;
@@ -119,19 +125,17 @@ namespace Force.Blazer
 			_respectFlush = (flags & BlazerFlags.RespectFlush) != 0;
 
 			_maxInBlockSize = 1 << ((((int)flags) & 15) + 9);
+			_innerBuffer = new byte[_maxInBlockSize];
 			_outBufferHeaderSize = _includeCrc ? 8 : 4;
 			_encoder = options.Encoder;
 			_encoderAlgorithmId = (byte)_encoder.GetAlgorithmId();
 			if (_encoderAlgorithmId > 15)
 				throw new InvalidOperationException("Invalid encoder algorithm");
 
-			Action<byte[], int, byte> writeOuterBlock = WriteOuterBlock;
-
 			if (!string.IsNullOrEmpty(options.Password))
 			{
 				flags |= BlazerFlags.EncryptInner;
-				_encryptHelper = new EncryptHelper(options.Password);
-				writeOuterBlock = WriteOuterBlockEncrypted;
+				_encryptHelper = new EncryptHelper(options.Password, _maxInBlockSize);
 			}
 			else
 			{
@@ -158,15 +162,16 @@ namespace Force.Blazer
 			_header = _encryptHelper.AppendHeader(_header);
 			if (options.FileInfo != null)
 			{
-				_fileInfoHeader = FileHeaderHelper.GenerateFileHeader(options.FileInfo, _outBufferHeaderSize);
+				_fileInfoHeader = FileHeaderHelper.GenerateFileHeader(options.FileInfo);
 			}
 
-			_encoder.Init(_maxInBlockSize, _outBufferHeaderSize, writeOuterBlock);
+			_blockHeader = new byte[_outBufferHeaderSize];
+			_encoder.Init(_maxInBlockSize);
 		}
 
 		protected override void Dispose(bool disposing)
 		{
-			_encoder.CompressAndWrite();
+			ProcessAndWrite();
 			// zero-length file
 			if (_header != null)
 			{
@@ -188,52 +193,54 @@ namespace Force.Blazer
 
 		public override void Write(byte[] buffer, int offset, int count)
 		{
-			_encoder.Write(buffer, offset, count);
+			while (true)
+			{
+				if (_innerBufferPos == _maxInBlockSize)
+				{
+					ProcessAndWrite();
+				}
+
+				var toWrite = Math.Min(_maxInBlockSize - _innerBufferPos, count);
+				if (toWrite == 0)
+					break;
+
+				Buffer.BlockCopy(buffer, offset, _innerBuffer, _innerBufferPos, toWrite);
+				_innerBufferPos += toWrite;
+				count -= toWrite;
+				offset += toWrite;
+			}
 		}
 
 		public override void Flush()
 		{
 			if (_respectFlush)
 			{
-				_encoder.CompressAndWrite();
+				ProcessAndWrite();
 				_innerStream.Flush();
 			}
 		}
 
-		private void WriteOuterBlock(byte[] bufferOut, int length, byte blockType)
+		private void ProcessAndWrite()
 		{
-			if (_header != null)
+			// nothing to write
+			if (_innerBufferPos == 0)
+				return;
+
+			var info = _encoder.Encode(_innerBuffer, 0, _innerBufferPos);
+			// should not compress
+			if (info.Count > _innerBufferPos)
 			{
-				if (_header.Length > 0)
-					_innerStream.Write(_header, 0, _header.Length);
-
-				_header = null;
-
-				if (_fileInfoHeader != null)
-					WriteOuterBlock(_fileInfoHeader, _fileInfoHeader.Length, 0xfd);
+				WriteOuterBlock(_innerBuffer, 0, _innerBufferPos, 0x00);
+			}
+			else
+			{
+				WriteOuterBlock(info.Buffer, info.Offset, info.Length, _encoderAlgorithmId);
 			}
 
-			if (length == _outBufferHeaderSize) return;
-			var o = length - _outBufferHeaderSize - 1; // -1 - we always write here at least 1 byte, so there is no point to send info about this byte
-			
-			bufferOut[0] = blockType;
-			bufferOut[1] = (byte)o;
-			bufferOut[2] = (byte)(o >> 8);
-			bufferOut[3] = (byte)(o >> 16);
-
-			if (_includeCrc)
-			{
-				var crc = Crc32C.Calculate(bufferOut, _outBufferHeaderSize, length - _outBufferHeaderSize);
-				bufferOut[4] = (byte)crc;
-				bufferOut[5] = (byte)(crc >> 8);
-				bufferOut[6] = (byte)(crc >> 16);
-				bufferOut[7] = (byte)(crc >> 24);
-			}
-
-			_innerStream.Write(bufferOut, 0, length);
+			_innerBufferPos = 0;
 		}
 
-		private void WriteOuterBlockEncrypted(byte[] bufferOut, int length, byte blockType)
+		private void WriteOuterBlock(byte[] bufferOut, int offset, int length, byte blockType)
 		{
 			if (_header != null)
 			{
@@ -243,31 +250,32 @@ namespace Force.Blazer
 				_header = null;
 
 				if (_fileInfoHeader != null)
-					WriteOuterBlockEncrypted(_fileInfoHeader, _fileInfoHeader.Length, 0xfd);
+					WriteOuterBlock(_fileInfoHeader, 0, _fileInfoHeader.Length, 0xfd);
 			}
 
-			if (length == _outBufferHeaderSize) return;
-			var o = length - _outBufferHeaderSize - 1; // -1 - we always write here at least 1 byte, so there is no point to send info about this byte
+			if (length == 0) return;
+			var o = length - 1; // -1 - we always write here at least 1 byte, so there is no point to send info about this byte
 
-			bufferOut[0] = blockType;
-			bufferOut[1] = (byte)o;
-			bufferOut[2] = (byte)(o >> 8);
-			bufferOut[3] = (byte)(o >> 16);
+			var blockHeader = _blockHeader;
 
-			var targetBuffer = _encryptHelper.Encrypt(bufferOut, _outBufferHeaderSize, length - _outBufferHeaderSize);
-			var targetLength = targetBuffer.Length;
+			blockHeader[0] = blockType;
+			blockHeader[1] = (byte)o;
+			blockHeader[2] = (byte)(o >> 8);
+			blockHeader[3] = (byte)(o >> 16);
+
+			var targetBuffer = _encryptHelper.Encrypt(bufferOut, offset, length);
 
 			if (_includeCrc)
 			{
-				var crc = Crc32C.Calculate(targetBuffer, 0, targetLength);
-				bufferOut[4] = (byte)crc;
-				bufferOut[5] = (byte)(crc >> 8);
-				bufferOut[6] = (byte)(crc >> 16);
-				bufferOut[7] = (byte)(crc >> 24);
+				var crc = Crc32C.Calculate(targetBuffer.Buffer, targetBuffer.Offset, targetBuffer.Count);
+				blockHeader[4] = (byte)crc;
+				blockHeader[5] = (byte)(crc >> 8);
+				blockHeader[6] = (byte)(crc >> 16);
+				blockHeader[7] = (byte)(crc >> 24);
 			}
 
-			_innerStream.Write(bufferOut, 0, _outBufferHeaderSize);
-			_innerStream.Write(targetBuffer, 0, targetLength);
+			_innerStream.Write(blockHeader, 0, _outBufferHeaderSize);
+			_innerStream.Write(targetBuffer.Buffer, targetBuffer.Offset, targetBuffer.Count);
 		}
 	}
 }

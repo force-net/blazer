@@ -10,7 +10,9 @@ namespace Force.Blazer.Exe
 	{
 		static Program()
 		{
+#if !DEBUG
 			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomainOnAssemblyResolve;
+#endif
 		}
 
 		public static void Main(string[] args)
@@ -24,14 +26,14 @@ namespace Force.Blazer.Exe
 				return;
 			}
 
-			try
+			//try
 			{
 				Process(options);
 			}
-			catch (Exception ex)
+			/*catch (Exception ex)
 			{
 				Console.Error.WriteLine(ex.Message);
-			}
+			}*/
 		}
 
 		private static void Process(CommandLineOptions options)
@@ -126,11 +128,12 @@ namespace Force.Blazer.Exe
 
 				var mode = (options.Get("mode") ?? "block").ToLowerInvariant();
 
+				// todo: move file opening closer to usage, to ensure we're not removing existing file in case of error
 				var outStream = isStdOut ? Console.OpenStandardOutput() : new FileStream(archiveName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 
 				BlazerCompressionOptions compressionOptions = BlazerCompressionOptions.CreateStream();
 				compressionOptions.Password = password;
-				if (isBlobOnly) compressionOptions.MaxBlockSize = 1 << 20;
+				if (isBlobOnly) compressionOptions.MaxBlockSize = 1 << 24;
 
 				if (!skipFileName)
 					compressionOptions.FileInfo = BlazerFileInfo.FromFileName(fileName);

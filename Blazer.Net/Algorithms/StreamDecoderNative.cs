@@ -9,10 +9,10 @@ namespace Force.Blazer.Algorithms
 		private static extern int blazer_stream_decompress_block(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength);
 
-		public override void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> needNewBlock)
+		public override void Init(int maxUncompressedBlockSize)
 		{
 			// +8 for better copying speed. allow dummy copy by 8 bytes 
-			base.Init(maxUncompressedBlockSize + 8, needNewBlock);
+			base.Init(maxUncompressedBlockSize + 8);
 		}
 
 		public override int DecompressBlock(

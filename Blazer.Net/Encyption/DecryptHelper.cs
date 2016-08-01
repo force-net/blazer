@@ -6,9 +6,9 @@ namespace Force.Blazer.Encyption
 {
 	public class NullDecryptHelper
 	{
-		public virtual byte[] Decrypt(byte[] data, int offset, int count)
+		public virtual BufferInfo Decrypt(byte[] data, int offset, int length)
 		{
-			return data;
+			return new BufferInfo(data, offset, length);
 		}
 
 		public virtual int AdjustLength(int inLength)
@@ -21,7 +21,7 @@ namespace Force.Blazer.Encyption
 			return 0;
 		}
 
-		public virtual void Init(byte[] buffer)
+		public virtual void Init(byte[] header, int maxBlockSize)
 		{
 		}
 	}
@@ -31,6 +31,8 @@ namespace Force.Blazer.Encyption
 		private Aes _aes;
 
 		private string _password;
+
+		private byte[] _buffer;
 
 		public DecryptHelper(string password)
 		{
@@ -42,14 +44,18 @@ namespace Force.Blazer.Encyption
 			return 32;
 		}
 
-		public override void Init(byte[] buffer)
+		public override void Init(byte[] buffer, int maxBlockSize)
 		{
 			if (buffer.Length != GetHeaderLength())
 				throw new InvalidOperationException("Invalid header");
 
-			var salt = new byte[16];
-			Buffer.BlockCopy(buffer, 0, salt, 0, 16);
-			var pass = new Rfc2898DeriveBytes(_password, salt);
+			_buffer = new byte[AdjustLength(maxBlockSize)];
+
+			var salt = new byte[8];
+			Buffer.BlockCopy(buffer, 0, salt, 0, 8);
+			var random = new byte[8];
+			Buffer.BlockCopy(buffer, 8, random, 0, 8);
+			var pass = new Rfc2898DeriveBytes(_password, salt, 4096);
 			_password = null;
 			_aes = Aes.Create();
 			_aes.Key = pass.GetBytes(32);
@@ -60,20 +66,24 @@ namespace Force.Blazer.Encyption
 			using (var decryptor = _aes.CreateDecryptor())
 			{
 				var decoded = decryptor.TransformFinalBlock(buffer, 16, 16);
-				if (decoded.Where((t, i) => salt[i] != t).Any())
+				if (decoded.Take(8).Where((t, i) => random[i] != t).Any())
 					throw new InvalidOperationException("Invalid password");
 			}
 		}
 
-		public override byte[] Decrypt(byte[] data, int offset, int count)
+		public override BufferInfo Decrypt(byte[] data, int offset, int length)
 		{
 			using (var decryptor = _aes.CreateDecryptor())
-				return decryptor.TransformFinalBlock(data, offset, count);
+			{
+				var cnt = decryptor.TransformBlock(data, offset, length - offset, _buffer, 0);
+				// dummy data in header (8)
+				return new BufferInfo(_buffer, 8, cnt);
+			}
 		}
 
 		public override int AdjustLength(int inLength)
 		{
-			return ((inLength - 1) | 15) + 1;
+			return ((inLength - 1 + 8) | 15) + 1;
 		}
 	}
 }

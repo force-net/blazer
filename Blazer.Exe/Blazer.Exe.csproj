@@ -75,7 +75,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>del /q $(TargetDir)Blazer.Net.*
+    <PostBuildEvent>echo del /q $(TargetDir)Blazer.Net.*
 cmd /c if exist "$(ProjectDir)sign.cmd" "$(ProjectDir)sign.cmd" "$(TargetPath)" "$(SolutionDir)private.snk"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

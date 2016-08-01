@@ -4,9 +4,9 @@ namespace Force.Blazer.Algorithms
 {
 	public interface IDecoder : IDisposable
 	{
-		int Read(byte[] buffer, int offset, int count);
+		BufferInfo Decode(byte[] buffer, int offset, int length, bool isCompressed);
 
-		void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> getNextBlock);
+		void Init(int maxUncompressedBlockSize);
 
 		BlazerAlgorithm GetAlgorithmId();
 	}

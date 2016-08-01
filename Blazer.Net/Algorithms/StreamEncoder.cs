@@ -36,79 +36,50 @@ namespace Force.Blazer.Algorithms
 
 		private int _bufferOutIdx;
 
-		private int _bufferOutHeaderSize;
-
-		private Action<byte[], int, byte> _onBlockPrepared;
-
 		protected virtual int GetAdditionalInSize()
 		{
 			return 0;
 		}
 
-		public virtual void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared)
+		public virtual void Init(int maxInBlockSize)
 		{
 			_maxInBlockSize = maxInBlockSize;
 			_innerBufferSize = MAX_BACK_REF + maxInBlockSize;
 			_bufferIn = new byte[_innerBufferSize + 1 + GetAdditionalInSize()];
-			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3 + additionalHeaderSizeForOut + GetAdditionalInSize()];
-			_bufferOutIdx = additionalHeaderSizeForOut;
-			_bufferOutHeaderSize = additionalHeaderSizeForOut;
-			_onBlockPrepared = onBlockPrepared;
+			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3 + GetAdditionalInSize()];
+			_bufferOutIdx = 0;
 		}
 
-		public void Write(byte[] buffer, int offset, int count)
+		public BufferInfo Encode(byte[] buffer, int offset, int length)
 		{
-			while (count > 0)
+			var count = length - offset;
+			
+			// shift
+			if (_innerBufferSize - _bufferInPosFact < _maxInBlockSize)
 			{
-				// shift
-				if (_innerBufferSize - _bufferInPosFact < _maxInBlockSize)
-				{
-					var srcOffset = _bufferInPosFact - MAX_BACK_REF;
-					Buffer.BlockCopy(_bufferIn, srcOffset, _bufferIn, 0, _bufferInLength + MAX_BACK_REF);
-					_bufferInPosFact = MAX_BACK_REF;
-					_shiftValue += srcOffset;
-				}
-
-				// copying minimal count to set MAX_BLOCK = MAX_IN_BLOCK_SIZE
-				var toCopy = Math.Min(count, _maxInBlockSize - _bufferInLength);
-				Buffer.BlockCopy(buffer, offset, _bufferIn, _bufferInLength + _bufferInPosFact, toCopy);
-				_bufferInLength += toCopy;
-
-				if (_bufferInLength >= _maxInBlockSize)
-				{
-					CompressAndWrite();
-					if (_shiftValue >= 2 * SIZE_SHIFT)
-					{
-						ShiftHashtable();
-					}
-				}
-
-				count -= toCopy;
-				offset += toCopy;
-			}
-		}
-
-		public void CompressAndWrite()
-		{
-			// nothing to do
-			if (_bufferInLength == 0) return;
-
-			var cnt = CompressBlock(_bufferIn, _bufferInPosFact, _bufferInLength + _bufferInPosFact, _shiftValue, _bufferOut, _bufferOutIdx);
-			if (cnt - _bufferOutIdx >= _bufferInLength)
-			{
-				Buffer.BlockCopy(_bufferIn, _bufferInPosFact, _bufferOut, _bufferOutIdx, _bufferInLength);
-				_bufferOutIdx += _bufferInLength;
-				_onBlockPrepared(_bufferOut, _bufferOutIdx, 0x00);
-			}
-			else
-			{
-				_bufferOutIdx = cnt;
-				_onBlockPrepared(_bufferOut, _bufferOutIdx, (byte)GetAlgorithmId());
+				var srcOffset = _bufferInPosFact - MAX_BACK_REF;
+				Buffer.BlockCopy(_bufferIn, srcOffset, _bufferIn, 0, _bufferInLength + MAX_BACK_REF);
+				_bufferInPosFact = MAX_BACK_REF;
+				_shiftValue += srcOffset;
 			}
 
+			// copying minimal count to set MAX_BLOCK = MAX_IN_BLOCK_SIZE
+			var toCopy = Math.Min(count, _maxInBlockSize - _bufferInLength);
+			Buffer.BlockCopy(buffer, offset, _bufferIn, _bufferInLength + _bufferInPosFact, toCopy);
+			_bufferInLength += toCopy;
+
+			var cnt = CompressBlock(
+					_bufferIn, _bufferInPosFact, _bufferInLength + _bufferInPosFact, _shiftValue, _bufferOut, _bufferOutIdx);
 			_bufferInPosFact += _bufferInLength;
 			_bufferInLength = 0;
-			_bufferOutIdx = _bufferOutHeaderSize;
+			_bufferOutIdx = 0;
+
+			if (_shiftValue >= 2 * SIZE_SHIFT)
+			{
+				ShiftHashtable();
+			}
+
+			return new BufferInfo(_bufferOut, _bufferOutIdx, cnt);
 		}
 
 		public BlazerAlgorithm GetAlgorithmId()

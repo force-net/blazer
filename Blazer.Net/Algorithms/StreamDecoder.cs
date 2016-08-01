@@ -10,54 +10,33 @@ namespace Force.Blazer.Algorithms
 
 		private int _innerBufferMaxLen = 0;
 
-		private int _innerBufferPos = 0;
-
 		private int _innerBufferLen = 0;
 
-		private Func<byte[], Tuple<int, byte, bool>> _needNewBlock;
-
-		private byte[] _inBuffer;
-
-		public virtual void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> needNewBlock)
+		public virtual void Init(int maxUncompressedBlockSize)
 		{
 			_innerBufferMaxLen = maxUncompressedBlockSize + StreamEncoder.MAX_BACK_REF + 1;
 			_innerBuffer = new byte[_innerBufferMaxLen];
-			_inBuffer = new byte[maxUncompressedBlockSize];
-			_needNewBlock = needNewBlock;
 		}
 
-		public int Read(byte[] buffer, int offset, int count)
-		{
-			if (_innerBufferPos == _innerBufferLen)
-			{
-				var res = _needNewBlock(_inBuffer);
-				if (!res.Item3) return 0;
-				ProcessBlock(_inBuffer, res.Item1, res.Item2 != 0x00);
-			}
-
-			count = Math.Min(_innerBufferLen - _innerBufferPos, count);
-			Buffer.BlockCopy(_innerBuffer, _innerBufferPos, buffer, offset, count);
-			_innerBufferPos += count;
-			return count;
-		}
-
-		public void ProcessBlock(byte[] inBuffer, int length, bool isCompressed)
+		public BufferInfo Decode(byte[] buffer, int offset, int length, bool isCompressed)
 		{
 			if (_innerBufferLen > StreamEncoder.MAX_BACK_REF)
 			{
 				Buffer.BlockCopy(_innerBuffer, _innerBufferLen - StreamEncoder.MAX_BACK_REF, _innerBuffer, 0, StreamEncoder.MAX_BACK_REF);
-				// should be same there
 				_innerBufferLen = StreamEncoder.MAX_BACK_REF;
-				_innerBufferPos = StreamEncoder.MAX_BACK_REF;
 			}
 
+			var outOffset = _innerBufferLen;
+
 			if (isCompressed)
-				_innerBufferLen = DecompressBlock(inBuffer, length, _innerBuffer, _innerBufferLen, _innerBufferMaxLen);
+				_innerBufferLen = DecompressBlock(buffer, length, _innerBuffer, _innerBufferLen, _innerBufferMaxLen);
 			else
 			{
-				Buffer.BlockCopy(inBuffer, 0, _innerBuffer, _innerBufferLen, length);
+				Buffer.BlockCopy(buffer, 0, _innerBuffer, _innerBufferLen, length);
 				_innerBufferLen += length;
 			}
+
+			return new BufferInfo(_innerBuffer, outOffset, _innerBufferLen);
 		}
 
 		public BlazerAlgorithm GetAlgorithmId()
