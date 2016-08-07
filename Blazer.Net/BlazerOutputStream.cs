@@ -114,6 +114,8 @@ namespace Force.Blazer
 
 		private readonly bool _leaveStreamOpen;
 
+		private Action<byte[], int, int> _controlDataCallback { get; set; }
+
 		public BlazerOutputStream(Stream innerStream, BlazerDecompressionOptions options = null)
 		{
 			options = options ?? BlazerDecompressionOptions.CreateDefault();
@@ -123,6 +125,7 @@ namespace Force.Blazer
 				throw new InvalidOperationException("Base stream is invalid");
 
 			var password = options.Password;
+			_controlDataCallback = options.ControlDataCallback ?? ((b, o, c) => { });
 
 			if (options.EncyptFull)
 			{
@@ -192,7 +195,9 @@ namespace Force.Blazer
 			// todo: refactor this
 			if (_shouldHaveFileInfo)
 			{
-				var fInfo = GetNextChunk(_innerBuffer, false);
+				var fInfo = GetNextChunk(_innerBuffer);
+				if (_encodingType != 0xfd)
+					throw new InvalidOperationException("Invalid file info header");
 
 				_fileInfo = FileHeaderHelper.ParseFileHeader(fInfo.Buffer, fInfo.Offset, fInfo.Count);
 			}
@@ -213,13 +218,30 @@ namespace Force.Blazer
 			if (_decodedBufferOffset == _decodedBufferLength)
 			{
 				if (_isFinished) return 0;
-				var info = GetNextChunk(_innerBuffer, true);
+				var info = GetNextChunk(_innerBuffer);
 				if (info.Count == 0)
 				{
+					if (_encodingType == 0xf0)
+					{
+						_controlDataCallback(new byte[0], 0, 0);
+						return Read(buffer, offset, count);
+					}
+
 					_isFinished = true;
 					return 0;
 				}
-				
+
+				if (_encodingType != 0 && _encodingType != _algorithmId)
+				{
+					if (_encodingType == 0xf1)
+					{
+						_controlDataCallback(info.Buffer, info.Offset, info.Count);
+						return Read(buffer, offset, count);
+					}
+
+					throw new InvalidOperationException("Invalid header");
+				}
+
 				var decoded = _decoder.Decode(info.Buffer, info.Offset, info.Length, _encodingType != 0);
 				_decodedBuffer = decoded.Buffer;
 				_decodedBufferOffset = decoded.Offset;
@@ -236,12 +258,15 @@ namespace Force.Blazer
 		{
 			var buf = new byte[8];
 			if (!EnsureRead(buf, 0, 8))
-				throw new InvalidOperationException("Invalid Stream");
+				throw new InvalidOperationException("Invalid input stream");
 			if (buf[0] != 'b' || buf[1] != 'L' || buf[2] != 'z')
-				throw new InvalidOperationException("This is not blazer archive");
+				throw new InvalidOperationException("This is not Blazer archive");
 			if (buf[3] != 0x00)
-				throw new InvalidOperationException("Stream is created in new version of archiver. Please, update library.");
+				throw new InvalidOperationException("Stream was created in new version of Blazer library");
 			BlazerFlags flags = (BlazerFlags)(buf[4] | ((uint)buf[5] << 8) | ((uint)buf[6] << 16) | ((uint)buf[7] << 24));
+
+			if ((flags & (~BlazerFlags.AllKnownFlags)) != 0)
+				throw new InvalidOperationException("Invalid flag combination. Try to use newer version of Blazer");
 
 			_decoder = EncoderDecoderFactory.GetDecoder((BlazerAlgorithm)((((uint)flags) >> 4) & 15));
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);
@@ -291,7 +316,7 @@ namespace Force.Blazer
 
 		private uint _passedCrc;
 
-		private int GetNextChunkHeader(bool validateEncodingType)
+		private int GetNextChunkHeader()
 		{
 			// end of stream
 			if (!EnsureRead(_sizeBlock, 0, 4)) return 0;
@@ -305,8 +330,10 @@ namespace Force.Blazer
 				return 0;
 			}
 
-			if (_encodingType != 0 && _encodingType != _algorithmId && validateEncodingType)
-				throw new InvalidOperationException("Invalid header");
+			if (_encodingType == 0xf0)
+			{
+				return 0;
+			}
 
 			var inLength = ((_sizeBlock[1] << 0) | (_sizeBlock[2] << 8) | _sizeBlock[3] << 16) + 1;
 			if (inLength > _maxUncompressedBlockSize)
@@ -322,9 +349,9 @@ namespace Force.Blazer
 			return inLength;
 		}
 
-		private BufferInfo GetNextChunk(byte[] inBuffer, bool validateEncoding)
+		private BufferInfo GetNextChunk(byte[] inBuffer)
 		{
-			var inLength = GetNextChunkHeader(validateEncoding);
+			var inLength = GetNextChunkHeader();
 			if (inLength == 0) return new BufferInfo(null, 0, 0);
 
 			var origInLength = inLength;

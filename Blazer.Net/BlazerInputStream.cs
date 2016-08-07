@@ -184,9 +184,7 @@ namespace Force.Blazer
 			// zero-length file
 			if (_header != null)
 			{
-				if (_header.Length > 0)
-					_innerStream.Write(_header, 0, _header.Length);
-				_header = null;
+				WriteHeader();
 			}
 
 			if (_includeFooter)
@@ -199,6 +197,32 @@ namespace Force.Blazer
 			_encoder.Dispose();
 			base.Dispose(disposing);
 		}
+
+		public virtual void WriteControlData(byte[] buffer, int offset, int count)
+		{
+			if (count > 1 << 24)
+				throw new InvalidOperationException("Very big control block");
+
+			if (count < 0)
+				throw new InvalidOperationException("Cannot write zero-length data");
+
+			if (_header != null)
+			{
+				WriteHeader();
+			}
+
+			// some variant of ping message
+			if (count == 0)
+			{
+				_innerStream.Write(new byte[] { 0xf0, 0, 0, 0 }, 0, 4);
+			}
+			else
+			{
+				WriteOuterBlock(buffer, offset, count + offset, 0xf1);
+			}
+		}
+
+
 
 		public override void Write(byte[] buffer, int offset, int count)
 		{
@@ -249,7 +273,7 @@ namespace Force.Blazer
 			_innerBufferPos = 0;
 		}
 
-		private void WriteOuterBlock(byte[] bufferOut, int offset, int length, byte blockType)
+		private void WriteHeader()
 		{
 			if (_header != null)
 			{
@@ -260,6 +284,14 @@ namespace Force.Blazer
 
 				if (_fileInfoHeader != null)
 					WriteOuterBlock(_fileInfoHeader, 0, _fileInfoHeader.Length, 0xfd);
+			}
+		}
+
+		private void WriteOuterBlock(byte[] bufferOut, int offset, int length, byte blockType)
+		{
+			if (_header != null)
+			{
+				WriteHeader();
 			}
 
 			if (length == 0) return;

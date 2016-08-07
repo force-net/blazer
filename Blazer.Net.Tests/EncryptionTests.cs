@@ -74,7 +74,7 @@ namespace Blazer.Net.Tests
 			blazerCompressionOptions.Password = "123";
 			blazerCompressionOptions.EncryptFull = true;
 			var ex = Assert.Throws<InvalidOperationException>(() => IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("123") { EncyptFull = false })));
-			Assert.That(ex.Message, Is.EqualTo("This is not blazer archive"));
+			Assert.That(ex.Message, Is.EqualTo("This is not Blazer archive"));
 		}
 
 		[Test]
@@ -85,7 +85,7 @@ namespace Blazer.Net.Tests
 			blazerCompressionOptions.Password = "123";
 			blazerCompressionOptions.EncryptFull = true;
 			var ex = Assert.Throws<InvalidOperationException>(() => IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("1") { EncyptFull = true })));
-			Assert.That(ex.Message, Is.EqualTo("This is not blazer archive"));
+			Assert.That(ex.Message, Is.EqualTo("This is not Blazer archive"));
 		}
 	}
 }

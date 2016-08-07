@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 using Force.Blazer.Algorithms;
 
@@ -28,6 +29,8 @@ namespace Force.Blazer
 		public string Password { get; set; }
 
 		public bool EncyptFull { get; set; }
+
+		public Action<byte[], int, int> ControlDataCallback { get; set; }
 
 		public static BlazerDecompressionOptions CreateDefault()
 		{

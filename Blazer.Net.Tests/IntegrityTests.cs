@@ -50,5 +50,26 @@ namespace Blazer.Net.Tests
 			blazerCompressionOptions.SetEncoderByAlgorithm(algorithm);
 			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions);
 		}
+
+		[Test]
+		public void Invalid_Header_Should_Throw_Errors()
+		{
+			var data1 = new byte[12];
+			var compressed = IntegrityHelper.CompressData(data1, BlazerCompressionOptions.CreateStream());
+			// not blazer archiver
+			compressed[0]++;
+			Assert.That(Assert.Throws<InvalidOperationException>(() => IntegrityHelper.DecompressData(compressed)).Message, Is.EqualTo("This is not Blazer archive"));
+			compressed[0]--;
+
+			// invalid version
+			compressed[3]++;
+			Assert.That(Assert.Throws<InvalidOperationException>(() => IntegrityHelper.DecompressData(compressed)).Message, Is.EqualTo("Stream was created in new version of Blazer library"));
+			compressed[3]--;
+
+			// invalid flags
+			compressed[6]++;
+			Assert.That(Assert.Throws<InvalidOperationException>(() => IntegrityHelper.DecompressData(compressed)).Message, Is.EqualTo("Invalid flag combination. Try to use newer version of Blazer"));
+			compressed[6]--;
+		}
 	}
 }

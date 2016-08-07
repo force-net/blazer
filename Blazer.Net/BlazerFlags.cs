@@ -40,6 +40,9 @@ namespace Force.Blazer
 
 		Default = IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush,
 		DefaultStream = Default | InBlockSize64K,
-		DefaultBlock = Default | InBlockSize2M
+		DefaultBlock = Default | InBlockSize2M,
+
+		// all known flags for this time
+		AllKnownFlags = InBlockSize16M | IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush | EncryptInner | EncryptOuter | OnlyOneFile | 0xf0
 	}
 }
