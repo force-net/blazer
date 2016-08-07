@@ -20,7 +20,7 @@ namespace Force.Blazer.Algorithms
 			if (!isCompressed)
 				return new BufferInfo(buffer, offset, length);
 
-			var outLen = DecompressBlock(buffer, 0, length, _innerBuffer, 0, _maxUncompressedBlockSize);
+			var outLen = DecompressBlock(buffer, offset, length, _innerBuffer, 0, _maxUncompressedBlockSize);
 			return new BufferInfo(_innerBuffer, 0, outLen);
 		}
 

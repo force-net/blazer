@@ -29,7 +29,7 @@ namespace Force.Blazer.Algorithms
 			var outOffset = _innerBufferLen;
 
 			if (isCompressed)
-				_innerBufferLen = DecompressBlock(buffer, length, _innerBuffer, _innerBufferLen, _innerBufferMaxLen);
+				_innerBufferLen = DecompressBlock(buffer, offset, length, _innerBuffer, _innerBufferLen, _innerBufferMaxLen);
 			else
 			{
 				Buffer.BlockCopy(buffer, 0, _innerBuffer, _innerBufferLen, length);
@@ -45,14 +45,14 @@ namespace Force.Blazer.Algorithms
 		}
 
 		public virtual int DecompressBlock(
-			byte[] bufferIn, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
 		{
-			return DecompressBlockExternal(bufferIn, bufferInLength, bufferOut, idxOut, bufferOutLength);
+			return DecompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, idxOut, bufferOutLength);
 		}
 
-		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
+		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
 		{
-			var idxIn = 0;
+			var idxIn = bufferInOffset;
 			while (idxIn < bufferInLength)
 			{
 				var elem = bufferIn[idxIn++];

@@ -217,12 +217,15 @@ namespace Force.Blazer
 			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;
 			if ((flags & BlazerFlags.EncryptInner) != 0)
 			{
-				if (!(_decryptHelper is DecryptHelper))
-					throw new InvalidOperationException("Stream is encrypted.");
+				if (!(_decryptHelper is DecryptHelper)) throw new InvalidOperationException("Stream is encrypted.");
 				var encHeader = new byte[_decryptHelper.GetHeaderLength()];
-				if (!EnsureRead(encHeader, 0, encHeader.Length))
-					throw new InvalidOperationException("Missing encryption header");
+				if (!EnsureRead(encHeader, 0, encHeader.Length)) throw new InvalidOperationException("Missing encryption header");
 				_decryptHelper.Init(encHeader, _maxUncompressedBlockSize);
+			}
+			else
+			{
+				if (_decryptHelper is DecryptHelper)
+					throw new InvalidOperationException("Stream is not encrypted.");
 			}
 
 			_decoder.Init(_maxUncompressedBlockSize);
@@ -290,6 +293,8 @@ namespace Force.Blazer
 			var inLength = GetNextChunkHeader(validateEncoding);
 			if (inLength == 0) return new BufferInfo(null, 0, 0);
 
+			var origInLength = inLength;
+
 			inLength = _decryptHelper.AdjustLength(inLength);
 
 			if (!EnsureRead(inBuffer, 0, inLength))
@@ -304,6 +309,8 @@ namespace Force.Blazer
 				if (realCrc != _passedCrc)
 					throw new InvalidOperationException("Invalid CRC32C data in passed block. It seems, data error is occured.");
 			}
+
+			info.Length = origInLength + info.Offset;
 
 			return info;
 		}

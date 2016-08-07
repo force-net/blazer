@@ -12,7 +12,7 @@ namespace Force.Blazer.Algorithms
 		public override int DecompressBlock(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
 		{
-			var res = blazer_block_decompress_block(bufferIn, 0, bufferInLength, bufferOut, idxOut, bufferOutLength);
+			var res = blazer_block_decompress_block(bufferIn, bufferInOffset, bufferInLength, bufferOut, idxOut, bufferOutLength);
 			if (res < 0)
 				throw new InvalidOperationException("Invalid compressed data");
 			return res;

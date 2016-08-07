@@ -16,10 +16,10 @@ namespace Force.Blazer.Algorithms
 		}
 
 		public override int DecompressBlock(
-			byte[] bufferIn, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
 		{
 			var cnt = blazer_stream_decompress_block(
-				bufferIn, 0, bufferInLength, bufferOut, idxOut, bufferOutLength);
+				bufferIn, bufferInOffset, bufferInLength, bufferOut, idxOut, bufferOutLength);
 			if (cnt < 0)
 				throw new InvalidOperationException("Invalid compressed data");
 			return cnt;
