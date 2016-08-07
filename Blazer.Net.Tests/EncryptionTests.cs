@@ -57,15 +57,35 @@ namespace Blazer.Net.Tests
 		}
 
 		[Test]
-		public void AesTest1()
+		public void EncyptFull_Should_Work()
 		{
-			var aes = Aes.Create();
-			aes.IV = new byte[16];
-			aes.Padding = PaddingMode.None;
-			var inData = new byte[16];
-			Console.WriteLine(BitConverter.ToString(aes.CreateEncryptor().TransformFinalBlock(inData, 0, 16)));
-			inData[0] = 1;
-			Console.WriteLine(BitConverter.ToString(aes.CreateEncryptor().TransformFinalBlock(inData, 0, 16)));
+			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.Password = "123";
+			blazerCompressionOptions.EncryptFull = true;
+			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("123") { EncyptFull = true }));
+		}
+
+		[Test]
+		public void Invalid_Archive_If_Missing_EncyptFull()
+		{
+			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.Password = "123";
+			blazerCompressionOptions.EncryptFull = true;
+			var ex = Assert.Throws<InvalidOperationException>(() => IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("123") { EncyptFull = false })));
+			Assert.That(ex.Message, Is.EqualTo("This is not blazer archive"));
+		}
+
+		[Test]
+		public void Invalid_Archive_If_Invalid_EncyptFull_Password()
+		{
+			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.Password = "123";
+			blazerCompressionOptions.EncryptFull = true;
+			var ex = Assert.Throws<InvalidOperationException>(() => IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("1") { EncyptFull = true })));
+			Assert.That(ex.Message, Is.EqualTo("This is not blazer archive"));
 		}
 	}
 }

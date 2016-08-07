@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -86,6 +87,29 @@ namespace Force.Blazer.Encyption
 		public override int AdjustLength(int inLength)
 		{
 			return ((inLength - 1 + 8) | 15) + 1;
+		}
+
+		public static Stream ConvertStreamToDecyptionStream(Stream inner, string password)
+		{
+			var salt = new byte[8];
+			// ensure read 8 bytes
+			var cnt = 8;
+			while (cnt > 0)
+			{
+				var readed = inner.Read(salt, 0, cnt);
+				if (readed == 0 && cnt > 0)
+					throw new InvalidOperationException("Invalid input stream");
+				cnt -= readed;
+			}
+			
+			var pass = new Rfc2898DeriveBytes(password, salt, 4096);
+			var aes = Aes.Create();
+			aes.Key = pass.GetBytes(32);
+			// zero. it is ok - we use random password (due salt), so, anyway it will be different
+			aes.IV = new byte[16];
+			aes.Mode = CipherMode.CBC;
+			aes.Padding = PaddingMode.ISO10126; // here we will use such padding
+			return new CryptoStream(inner, aes.CreateDecryptor(), CryptoStreamMode.Read);
 		}
 	}
 }

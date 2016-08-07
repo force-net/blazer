@@ -27,6 +27,8 @@ namespace Force.Blazer
 
 		public string Password { get; set; }
 
+		public bool EncyptFull { get; set; }
+
 		public static BlazerDecompressionOptions CreateDefault()
 		{
 			return new BlazerDecompressionOptions();

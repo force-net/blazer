@@ -112,7 +112,7 @@ namespace Force.Blazer
 			}
 		}
 
-		private bool _leaveStreamOpen;
+		private readonly bool _leaveStreamOpen;
 
 		public BlazerOutputStream(Stream innerStream, BlazerDecompressionOptions options = null)
 		{
@@ -121,6 +121,18 @@ namespace Force.Blazer
 			_innerStream = innerStream;
 			if (!_innerStream.CanRead)
 				throw new InvalidOperationException("Base stream is invalid");
+
+			var password = options.Password;
+
+			if (options.EncyptFull)
+			{
+				if (string.IsNullOrEmpty(options.Password))
+					throw new InvalidOperationException("Encryption flag was set, but password is missing.");
+				_innerStream = DecryptHelper.ConvertStreamToDecyptionStream(innerStream, options.Password);
+				// no more password for this
+				password = null;
+			}
+
 			if (options.CompressionOptions != null)
 			{
 				var decoder = options.Decoder;
@@ -132,11 +144,11 @@ namespace Force.Blazer
 					decoder = options.Decoder;
 				}
 
-				InitByFlags(options.CompressionOptions.GetFlags(), decoder, options.Password);
+				InitByFlags(options.CompressionOptions.GetFlags(), decoder, password);
 			}
 			else
 			{
-				InitByOptions(options.Password);
+				InitByOptions(password);
 			}
 		}
 

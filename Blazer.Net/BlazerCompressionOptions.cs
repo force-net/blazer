@@ -10,21 +10,9 @@ namespace Force.Blazer
 
 		private BlazerFlags _flags { get; set; }
 
-		private string _password;
+		public string Password { get; set; }
 
-		public string Password
-		{
-			get
-			{
-				return _password;
-			}
-
-			set
-			{
-				_password = value;
-				SetFlag(BlazerFlags.EncryptInner, !string.IsNullOrEmpty(_password));
-			}
-		}
+		public bool EncryptFull { get; set; }
 
 		public bool LeaveStreamOpen { get; set; }
 
@@ -164,7 +152,13 @@ namespace Force.Blazer
 
 		public BlazerFlags GetFlags()
 		{
-			return _flags;
+			var flags = _flags;
+			if (!string.IsNullOrEmpty(Password))
+			{
+				flags |= EncryptFull ? BlazerFlags.EncryptOuter : BlazerFlags.EncryptInner;
+			}
+
+			return flags;
 		}
 
 		private void SetFlag(BlazerFlags flag, bool isSet)

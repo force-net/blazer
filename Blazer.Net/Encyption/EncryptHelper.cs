@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Security.Cryptography;
 
 namespace Force.Blazer.Encyption
@@ -118,6 +119,22 @@ namespace Force.Blazer.Encyption
 			Buffer.BlockCopy(header, 0, res, 0, header.Length);
 			Buffer.BlockCopy(_headerToWrite, 0, res, header.Length, _headerToWrite.Length);
 			return res;
+		}
+
+		public static Stream ConvertStreamToEncyptionStream(Stream inner, string password)
+		{
+			var rng = RandomNumberGenerator.Create();
+			var salt = new byte[8];
+			rng.GetBytes(salt);
+			var pass = new Rfc2898DeriveBytes(password, salt, 4096);
+			var aes = Aes.Create();
+			aes.Key = pass.GetBytes(32);
+			// zero. it is ok - we use random password (due salt), so, anyway it will be different
+			aes.IV = new byte[16];
+			aes.Mode = CipherMode.CBC;
+			aes.Padding = PaddingMode.ISO10126; // here we will use such padding
+			inner.Write(salt, 0, 8);
+			return new CryptoStream(inner, aes.CreateEncryptor(), CryptoStreamMode.Write);
 		}
 	}
 }

@@ -29,8 +29,9 @@ namespace Force.Blazer
 		IncludeFooter = 1024,
 		RespectFlush = 2048,
 
+		// in theory, we can encrypt outer and inner two times, so, let's keep both flags
 		EncryptInner = 4096,
-		NotImplementedEncryptOuter = 8192,
+		EncryptOuter = 8192,
 		NotImplementedAddRecoveryInfo = 16384,
 
 		NoFileInfo = 0,

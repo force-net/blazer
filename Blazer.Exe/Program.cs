@@ -45,6 +45,7 @@ namespace Force.Blazer.Exe
 			var password = options.Get("p", "password");
 			var isBlobOnly = options.Has("blobonly");
 			var skipFileName = options.Has("nofilename");
+			var encyptFull = options.Has("encryptfull");
 
 			if (isDecompress)
 			{
@@ -63,8 +64,8 @@ namespace Force.Blazer.Exe
 					inStream = new BlazerOutputStream(inStreamSource, new BlazerDecompressionOptions(password));
 				else
 				{
-					var decOptions = new BlazerDecompressionOptions(password);
-					decOptions.CompressionOptions = new BlazerCompressionOptions()
+					var decOptions = new BlazerDecompressionOptions(password) { EncyptFull = encyptFull };
+					decOptions.CompressionOptions = new BlazerCompressionOptions
 														{
 															IncludeCrc = false,
 															IncludeFooter = false,
@@ -142,6 +143,7 @@ namespace Force.Blazer.Exe
 
 				BlazerCompressionOptions compressionOptions = BlazerCompressionOptions.CreateStream();
 				compressionOptions.Password = password;
+				compressionOptions.EncryptFull = encyptFull;
 
 				if (!skipFileName)
 					compressionOptions.FileInfo = BlazerFileInfo.FromFileName(fileName);

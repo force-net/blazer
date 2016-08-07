@@ -111,11 +111,20 @@ namespace Force.Blazer
 			if (innerStream == null)
 				throw new ArgumentNullException("innerStream");
 
-			_innerStream = innerStream;
-			if (!_innerStream.CanWrite)
+			if (!innerStream.CanWrite)
 				throw new InvalidOperationException("Base stream is invalid");
 
+			_innerStream = innerStream;
+
 			var flags = options.GetFlags();
+
+			var encyptOuter = (flags & BlazerFlags.EncryptOuter) != 0;
+			if (encyptOuter)
+			{
+				if (string.IsNullOrEmpty(options.Password))
+					throw new InvalidOperationException("Encryption flag was set, but password is missing.");
+				_innerStream = EncryptHelper.ConvertStreamToEncyptionStream(innerStream, options.Password);
+			}
 
 			_leaveStreamOpen = options.LeaveStreamOpen;
 
@@ -132,7 +141,7 @@ namespace Force.Blazer
 			if (_encoderAlgorithmId > 15)
 				throw new InvalidOperationException("Invalid encoder algorithm");
 
-			if (!string.IsNullOrEmpty(options.Password))
+			if (!string.IsNullOrEmpty(options.Password) && !encyptOuter)
 			{
 				flags |= BlazerFlags.EncryptInner;
 				_encryptHelper = new EncryptHelper(options.Password, _maxInBlockSize);
