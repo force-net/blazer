@@ -100,9 +100,9 @@ namespace Force.Blazer
 
 		private bool _shouldHaveFileInfo;
 
-		private readonly NullDecryptHelper _decryptHelper;
+		private NullDecryptHelper _decryptHelper;
 
-		private readonly BlazerFileInfo _fileInfo;
+		private BlazerFileInfo _fileInfo;
 
 		public BlazerFileInfo FileInfo
 		{
@@ -112,12 +112,36 @@ namespace Force.Blazer
 			}
 		}
 
-		public BlazerOutputStream(Stream innerStream, IDecoder decoder, BlazerFlags flags, string password = null)
+		private bool _leaveStreamOpen;
+
+		public BlazerOutputStream(Stream innerStream, BlazerDecompressionOptions options = null)
 		{
+			options = options ?? BlazerDecompressionOptions.CreateDefault();
+			_leaveStreamOpen = options.LeaveStreamOpen;
 			_innerStream = innerStream;
 			if (!_innerStream.CanRead)
 				throw new InvalidOperationException("Base stream is invalid");
+			if (options.CompressionOptions != null)
+			{
+				var decoder = options.Decoder;
+				if (decoder == null)
+				{
+					if (options.CompressionOptions.Encoder == null)
+						throw new InvalidOperationException("Missing decoder information");
+					options.SetDecoderByAlgorithm(options.CompressionOptions.Encoder.GetAlgorithmId());
+					decoder = options.Decoder;
+				}
 
+				InitByFlags(options.CompressionOptions.GetFlags(), decoder, options.Password);
+			}
+			else
+			{
+				InitByOptions(options.Password);
+			}
+		}
+
+		private void InitByFlags(BlazerFlags flags, IDecoder decoder, string password)
+		{
 			if ((flags & BlazerFlags.IncludeHeader) != 0)
 				throw new InvalidOperationException("Flags cannot contains IncludeHeader flags");
 
@@ -136,17 +160,14 @@ namespace Force.Blazer
 					throw new InvalidOperationException("Missing encryption header");
 				_decryptHelper.Init(encHeader, _maxUncompressedBlockSize);
 			}
+			else
+			{
+				_decryptHelper = new NullDecryptHelper();
+			}
 		}
 
-		public BlazerOutputStream(Stream innerStream, BlazerAlgorithm algorithm, BlazerFlags flags, string password = null)
-			: this(innerStream, EncoderDecoderFactory.GetDecoder(algorithm), flags, password)
+		private void InitByOptions(string password = null)
 		{
-		}
-
-		public BlazerOutputStream(Stream innerStream, string password = null)
-		{
-			_innerStream = innerStream;
-			_innerStream = innerStream;
 			if (!_innerStream.CanRead)
 				throw new InvalidOperationException("Base stream is invalid");
 			if (!string.IsNullOrEmpty(password))
@@ -167,7 +188,8 @@ namespace Force.Blazer
 
 		protected override void Dispose(bool disposing)
 		{
-			_innerStream.Dispose();
+			if (!_leaveStreamOpen)
+				_innerStream.Dispose();
 			_decoder.Dispose();
 			base.Dispose(disposing);
 		}
@@ -217,7 +239,7 @@ namespace Force.Blazer
 			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;
 			if ((flags & BlazerFlags.EncryptInner) != 0)
 			{
-				if (!(_decryptHelper is DecryptHelper)) throw new InvalidOperationException("Stream is encrypted.");
+				if (!(_decryptHelper is DecryptHelper)) throw new InvalidOperationException("Stream is encrypted, but password is not provided");
 				var encHeader = new byte[_decryptHelper.GetHeaderLength()];
 				if (!EnsureRead(encHeader, 0, encHeader.Length)) throw new InvalidOperationException("Missing encryption header");
 				_decryptHelper.Init(encHeader, _maxUncompressedBlockSize);
@@ -225,7 +247,7 @@ namespace Force.Blazer
 			else
 			{
 				if (_decryptHelper is DecryptHelper)
-					throw new InvalidOperationException("Stream is not encrypted.");
+					throw new InvalidOperationException("Stream is not encrypted");
 			}
 
 			_decoder.Init(_maxUncompressedBlockSize);
@@ -307,7 +329,7 @@ namespace Force.Blazer
 				var realCrc = Crc32C.Calculate(inBuffer, 0, inLength);
 
 				if (realCrc != _passedCrc)
-					throw new InvalidOperationException("Invalid CRC32C data in passed block. It seems, data error is occured.");
+					throw new InvalidOperationException("Invalid CRC32C data in passed block. It seems, data error is occured");
 			}
 
 			info.Length = origInLength + info.Offset;

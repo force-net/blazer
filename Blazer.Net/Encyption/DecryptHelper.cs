@@ -41,7 +41,7 @@ namespace Force.Blazer.Encyption
 
 		public override int GetHeaderLength()
 		{
-			return 32;
+			return 24;
 		}
 
 		public override void Init(byte[] buffer, int maxBlockSize)
@@ -53,8 +53,6 @@ namespace Force.Blazer.Encyption
 
 			var salt = new byte[8];
 			Buffer.BlockCopy(buffer, 0, salt, 0, 8);
-			var random = new byte[8];
-			Buffer.BlockCopy(buffer, 8, random, 0, 8);
 			var pass = new Rfc2898DeriveBytes(_password, salt, 4096);
 			_password = null;
 			_aes = Aes.Create();
@@ -63,10 +61,14 @@ namespace Force.Blazer.Encyption
 			_aes.IV = new byte[16];
 			_aes.Mode = CipherMode.CBC;
 			_aes.Padding = PaddingMode.Zeros;
-			using (var decryptor = _aes.CreateDecryptor())
+
+			using (var encryptor = _aes.CreateEncryptor())
 			{
-				var decoded = decryptor.TransformFinalBlock(buffer, 16, 16);
-				if (decoded.Take(8).Where((t, i) => random[i] != t).Any())
+				var toEncrypt = new byte[16];
+				Buffer.BlockCopy(buffer, 8, toEncrypt, 0, 8);
+				Buffer.BlockCopy(new[] { (byte)'B', (byte)'l', (byte)'a', (byte)'z', (byte)'e', (byte)'r', (byte)'!', (byte)'!' }, 0, toEncrypt, 8, 8);
+				var encoded = encryptor.TransformFinalBlock(toEncrypt, 0, 16);
+				if (encoded.Take(8).Where((t, i) => buffer[i + 16] != t).Any())
 					throw new InvalidOperationException("Invalid password");
 			}
 		}

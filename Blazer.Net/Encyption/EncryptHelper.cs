@@ -44,8 +44,8 @@ namespace Force.Blazer.Encyption
 			_randomBlock16 = new byte[16];
 
 			// we write to header 8 byte of salt + 8 byte of random data
-			// after that, we encrypt 16 bytes of random data (8 has written)
-			// this 16 bytes will be used for checking correctness on decryption
+			// after that, we encrypt 8 bytes of random data (pad with static to 16 and write first 8)
+			// this 8 bytes will be used for checking correctness on decryption
 			// this is fine for fast checking "is password correct", but does not
 			// give full information about is it the required password
 			_rng = RandomNumberGenerator.Create();
@@ -58,18 +58,23 @@ namespace Force.Blazer.Encyption
 			_aes.IV = new byte[16];
 			_aes.Mode = CipherMode.CBC;
 			_aes.Padding = PaddingMode.Zeros; // other padding will add additional block, we manually will add random padding
-			_headerToWrite = new byte[32];
+			_headerToWrite = new byte[24];
 
-			var random = new byte[16];
+			var random = new byte[8];
 			_rng.GetBytes(random);
+			var toEncrypt = new byte[16];
+
+			Buffer.BlockCopy(random, 0, toEncrypt, 0, 8);
+
+			Buffer.BlockCopy(new[] { (byte)'B', (byte)'l', (byte)'a', (byte)'z', (byte)'e', (byte)'r', (byte)'!', (byte)'!' }, 0, toEncrypt, 8, 8);
 
 			Buffer.BlockCopy(salt, 0, _headerToWrite, 0, 8);
 			Buffer.BlockCopy(random, 0, _headerToWrite, 8, 8);
 
 			using (var encryptor = _aes.CreateEncryptor())
 			{
-				var encoded = encryptor.TransformFinalBlock(random, 0, 16);
-				Buffer.BlockCopy(encoded, 0, _headerToWrite, 16, 16);
+				var encoded = encryptor.TransformFinalBlock(toEncrypt, 0, 16);
+				Buffer.BlockCopy(encoded, 0, _headerToWrite, 16, 8);
 			}
 		}
 
