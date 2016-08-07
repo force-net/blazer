@@ -260,8 +260,8 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_compress_block(unsigned c
 
 extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset, __int32 bufferOutLength)
 {
-	bufferIn += bufferInOffset;
 	unsigned char* bufferInEnd = bufferIn + bufferInLength;
+	bufferIn += bufferInOffset;
 
 	unsigned char* bufferOutOrig = bufferOut;
 	unsigned char* bufferOutEnd = bufferOut + bufferOutLength;

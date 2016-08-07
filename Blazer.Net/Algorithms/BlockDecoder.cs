@@ -13,51 +13,21 @@ namespace Force.Blazer.Algorithms
 
 		private byte[] _innerBuffer;
 
-		private int _innerBufferPos;
-
-		private int _innerBufferLen;
-
-		private byte[] _inBuffer;
-
-		private Func<byte[], Tuple<int, byte, bool>> _needNewBlock;
-
 		private int _maxUncompressedBlockSize;
 
-		public int Read(byte[] buffer, int offset, int count)
+		public BufferInfo Decode(byte[] buffer, int offset, int length, bool isCompressed)
 		{
-			if (_innerBufferPos == _innerBufferLen)
-			{
-				var res = _needNewBlock(_inBuffer);
-				if (!res.Item3) return 0;
-				ProcessBlock(_inBuffer, res.Item1, res.Item2 != 0x00);
-			}
-
-			count = Math.Min(_innerBufferLen - _innerBufferPos, count);
-			Buffer.BlockCopy(_innerBuffer, _innerBufferPos, buffer, offset, count);
-			_innerBufferPos += count;
-			return count;
-		}
-
-		public void ProcessBlock(byte[] inBuffer, int length, bool isCompressed)
-		{
-			_innerBufferPos = 0;
 			if (!isCompressed)
-			{
-				Buffer.BlockCopy(inBuffer, 0, _innerBuffer, 0, length);
-				_innerBufferLen = length;
-			}
-			else
-			{
-				_innerBufferLen = DecompressBlock(inBuffer, 0, length, _innerBuffer, 0, _maxUncompressedBlockSize);
-			}
+				return new BufferInfo(buffer, offset, length);
+
+			var outLen = DecompressBlock(buffer, offset, length, _innerBuffer, 0, _maxUncompressedBlockSize);
+			return new BufferInfo(_innerBuffer, 0, outLen);
 		}
 
-		public void Init(int maxUncompressedBlockSize, Func<byte[], Tuple<int, byte, bool>> getNextBlock)
+		public void Init(int maxUncompressedBlockSize)
 		{
 			_innerBuffer = new byte[maxUncompressedBlockSize];
 			_maxUncompressedBlockSize = maxUncompressedBlockSize;
-			_inBuffer = new byte[maxUncompressedBlockSize];
-			_needNewBlock = getNextBlock;
 		}
 
 		public BlazerAlgorithm GetAlgorithmId()

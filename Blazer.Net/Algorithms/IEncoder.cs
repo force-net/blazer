@@ -4,11 +4,9 @@ namespace Force.Blazer.Algorithms
 {
 	public interface IEncoder : IDisposable
 	{
-		void Write(byte[] buffer, int offset, int count);
+		BufferInfo Encode(byte[] buffer, int offset, int length);
 
-		void CompressAndWrite();
-
-		void Init(int maxInBlockSize, int additionalHeaderSizeForOut, Action<byte[], int, byte> onBlockPrepared);
+		void Init(int maxInBlockSize);
 
 		BlazerAlgorithm GetAlgorithmId();
 	}

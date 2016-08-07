@@ -10,7 +10,9 @@ namespace Force.Blazer.Exe
 	{
 		static Program()
 		{
+#if !DEBUG
 			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomainOnAssemblyResolve;
+#endif
 		}
 
 		public static void Main(string[] args)
@@ -58,16 +60,25 @@ namespace Force.Blazer.Exe
 				BlazerOutputStream inStream;
 
 				if (!isBlobOnly)
-					inStream = new BlazerOutputStream(inStreamSource, password);
+					inStream = new BlazerOutputStream(inStreamSource, new BlazerDecompressionOptions(password));
 				else
 				{
-					BlazerAlgorithm alg;
+					var decOptions = new BlazerDecompressionOptions(password);
+					decOptions.CompressionOptions = new BlazerCompressionOptions()
+														{
+															IncludeCrc = false,
+															IncludeFooter = false,
+															IncludeHeader = false,
+															FileInfo = null,
+															MaxBlockSize = 1 << 24
+														};
+
 					var mode = (options.Get("mode") ?? "block").ToLowerInvariant();
-					if (mode == "stream" || mode == "streamhigh") alg = BlazerAlgorithm.Stream;
-					else if (mode == "none") alg = BlazerAlgorithm.NoCompress;
-					else if (mode == "block") alg = BlazerAlgorithm.Block;
+					if (mode == "stream" || mode == "streamhigh") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Stream);
+					else if (mode == "none") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.NoCompress);
+					else if (mode == "block") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Block);
 					else throw new InvalidOperationException("Unsupported mode");
-					inStream = new BlazerOutputStream(inStreamSource, alg, BlazerFlags.InBlockSize16M, password);
+					inStream = new BlazerOutputStream(inStreamSource, decOptions);
 				}
 
 				var fileName = archiveName;
@@ -126,11 +137,11 @@ namespace Force.Blazer.Exe
 
 				var mode = (options.Get("mode") ?? "block").ToLowerInvariant();
 
+				// todo: move file opening closer to usage, to ensure we're not removing existing file in case of error
 				var outStream = isStdOut ? Console.OpenStandardOutput() : new FileStream(archiveName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 
 				BlazerCompressionOptions compressionOptions = BlazerCompressionOptions.CreateStream();
 				compressionOptions.Password = password;
-				if (isBlobOnly) compressionOptions.MaxBlockSize = 1 << 20;
 
 				if (!skipFileName)
 					compressionOptions.FileInfo = BlazerFileInfo.FromFileName(fileName);
@@ -147,6 +158,16 @@ namespace Force.Blazer.Exe
 					compressionOptions.MaxBlockSize = BlazerCompressionOptions.DefaultBlockBlockSize;
 				}
 				else throw new InvalidOperationException("Invalid compression mode");
+
+				if (isBlobOnly)
+				{
+					compressionOptions.IncludeCrc = false;
+					compressionOptions.IncludeFooter = false;
+					compressionOptions.IncludeHeader = false;
+					compressionOptions.MaxBlockSize = 1 << 24;
+					compressionOptions.FileInfo = null;
+				}
+
 
 				Stream blazerStream = new BlazerInputStream(outStream, compressionOptions);
 
