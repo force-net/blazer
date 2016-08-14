@@ -14,11 +14,17 @@ namespace Force.Blazer.Algorithms.Crc32C
 			_calculator = NativeHelper.IsNativeAvailable ? (ICrc32CCalculator)new Crc32CHardware() : new Crc32CSoftware();
 		}
 
+		/// <summary>
+		/// Calculates Crc32C data of given buffer
+		/// </summary>
 		public static uint Calculate(byte[] buffer, int offset, int count)
 		{
 			return _calculator.Calculate(buffer, offset, count);
 		}
 
+		/// <summary>
+		/// Calculates Crc32C data of given buffer
+		/// </summary>
 		public static uint Calculate(byte[] buffer)
 		{
 			return _calculator.Calculate(buffer, 0, buffer.Length);

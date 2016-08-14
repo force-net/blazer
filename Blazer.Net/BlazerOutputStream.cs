@@ -8,30 +8,48 @@ using Force.Blazer.Helpers;
 
 namespace Force.Blazer
 {
+	/// <summary>
+	/// Blazer decompression stream implementation
+	/// </summary>
 	public class BlazerOutputStream : Stream
 	{
 		#region Stream stub
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override void Flush()
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override void SetLength(long value)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Returns true
+		/// </summary>
 		public override bool CanRead
 		{
 			get
@@ -40,6 +58,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override bool CanSeek
 		{
 			get
@@ -48,6 +69,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override bool CanWrite
 		{
 			get
@@ -56,6 +80,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override long Length
 		{
 			get
@@ -64,6 +91,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Not supported for this stream
+		/// </summary>
 		public override long Position
 		{
 			get
@@ -104,6 +134,9 @@ namespace Force.Blazer
 
 		private BlazerFileInfo _fileInfo;
 
+		/// <summary>
+		/// Returns information about compressed file, if exitsts
+		/// </summary>
 		public BlazerFileInfo FileInfo
 		{
 			get
@@ -116,6 +149,9 @@ namespace Force.Blazer
 
 		private Action<byte[], int, int> _controlDataCallback { get; set; }
 
+		/// <summary>
+		/// Constructs Blazer decompression stream
+		/// </summary>
 		public BlazerOutputStream(Stream innerStream, BlazerDecompressionOptions options = null)
 		{
 			options = options ?? BlazerDecompressionOptions.CreateDefault();
@@ -185,10 +221,7 @@ namespace Force.Blazer
 		{
 			if (!_innerStream.CanRead)
 				throw new InvalidOperationException("Base stream is invalid");
-			if (!string.IsNullOrEmpty(password))
-				_decryptHelper = new DecryptHelper(password);
-			else
-				_decryptHelper = new NullDecryptHelper();
+			_decryptHelper = string.IsNullOrEmpty(password) ? new NullDecryptHelper() : new DecryptHelper(password);
 
 			ReadAndValidateHeader();
 
@@ -203,6 +236,10 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Releases the unmanaged resources used by the <see cref="T:System.IO.Stream"/> and optionally releases the managed resources.
+		/// </summary>
+		/// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
 		protected override void Dispose(bool disposing)
 		{
 			if (!_leaveStreamOpen)
@@ -213,6 +250,15 @@ namespace Force.Blazer
 
 		private bool _isFinished;
 
+		/// <summary>
+		/// Reads a sequence of bytes from the current stream and advances the position within the stream by the number of bytes read.
+		/// </summary>
+		/// <returns>
+		/// The total number of bytes read into the buffer. This can be less than the number of bytes requested if that many bytes are not currently available, or zero (0) if the end of the stream has been reached.
+		/// </returns>
+		/// <param name="buffer">An array of bytes. When this method returns, the buffer contains the specified byte array with the values between <paramref name="offset"/> and (<paramref name="offset"/> + <paramref name="count"/> - 1) replaced by the bytes read from the current source. </param>
+		/// <param name="offset">The zero-based byte offset in <paramref name="buffer"/> at which to begin storing the data read from the current stream. </param>
+		/// <param name="count">The maximum number of bytes to be read from the current stream. </param>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			if (_decodedBufferOffset == _decodedBufferLength)
@@ -304,7 +350,9 @@ namespace Force.Blazer
 			}
 		}
 
+// ReSharper disable UnusedParameter.Local
 		private void ValidateFooter(byte[] footer)
+// ReSharper restore UnusedParameter.Local
 		{
 			if (footer[0] != 0xff || footer[1] != (byte)'Z' || footer[2] != (byte)'l' || footer[3] != (byte)'B')
 				throw new InvalidOperationException("Invalid footer. Possible stream was truncated");

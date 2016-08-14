@@ -5,6 +5,9 @@ using System.Runtime.InteropServices;
 
 namespace Force.Blazer.Native
 {
+	/// <summary>
+	/// Helper for native implementation ofr Blazer algorithms
+	/// </summary>
 	public static class NativeHelper
 	{
 		[DllImport("Kernel32.dll")]
@@ -37,7 +40,6 @@ namespace Force.Blazer.Native
 		{
 			var architectureSuffix = IntPtr.Size == 8 ? "x64" : "x86";
 			var assembly = Assembly.GetExecutingAssembly();
-			var names = assembly.GetManifestResourceNames();
 			using (var stream =
 					assembly.GetManifestResourceStream("Force.Blazer.Resources.Blazer.Native." + architectureSuffix + ".dll"))
 			{
@@ -58,6 +60,10 @@ namespace Force.Blazer.Native
 			}
 		}
 
+		/// <summary>
+		/// Sets native implementation is enabled.
+		/// </summary>
+		/// <remarks>Native implementation can be turned off manually. If current environment does not support native implementation, software will be used anyway</remarks>
 		public static void SetNativeImplementation(bool isEnable)
 		{
 			IsNativeAvailable = isEnable && _isNativePossible;

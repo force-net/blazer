@@ -2,9 +2,11 @@
 using System.IO;
 using System.Security.Cryptography;
 
+using Force.Blazer.Algorithms;
+
 namespace Force.Blazer.Encyption
 {
-	public class NullEncryptHelper
+	internal class NullEncryptHelper
 	{
 		public virtual BufferInfo Encrypt(byte[] data, int offset, int length)
 		{
@@ -17,9 +19,11 @@ namespace Force.Blazer.Encyption
 		}
 	}
 
-	public class EncryptHelper : NullEncryptHelper
+	internal class EncryptHelper : NullEncryptHelper
 	{
 		private const int PrefixSize = 8;
+
+		private const int PbkIterations = 20000;
 
 		private readonly Aes _aes;
 
@@ -52,7 +56,7 @@ namespace Force.Blazer.Encyption
 			_rng = RandomNumberGenerator.Create();
 			var salt = new byte[8];
 			_rng.GetBytes(salt);
-			var pass = new Rfc2898DeriveBytes(password, salt, 4096);
+			var pass = new Rfc2898DeriveBytes(password, salt, PbkIterations);
 			_aes = Aes.Create();
 			_aes.Key = pass.GetBytes(32);
 			// zero. it is ok - we use data with salted random and do not need to use additional IV here

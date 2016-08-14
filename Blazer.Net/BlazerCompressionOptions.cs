@@ -4,18 +4,37 @@ using Force.Blazer.Algorithms;
 
 namespace Force.Blazer
 {
+	/// <summary>
+	/// Options for compression
+	/// </summary>
 	public class BlazerCompressionOptions
 	{
+		/// <summary>
+		/// Encoder (realization of compression algorithm)
+		/// </summary>
 		public IEncoder Encoder { get; set; }
 
 		private BlazerFlags _flags { get; set; }
 
+		/// <summary>
+		/// Password for encrypting data
+		/// </summary>
 		public string Password { get; set; }
 
+		/// <summary>
+		/// Encrypt full flag. Fully encypted streams does not reveal any information about inner data (blazer header is also encypted)
+		/// </summary>
 		public bool EncryptFull { get; set; }
 
+		/// <summary>
+		/// Leave inner stream open after closing blazer stream
+		/// </summary>
 		public bool LeaveStreamOpen { get; set; }
 
+		/// <summary>
+		/// Add Crc data to stream. If data are damaged, error will occure
+		/// </summary>
+		/// <remarks>Blazer uses Crc32C checksum algorithm</remarks>
 		public bool IncludeCrc
 		{
 			get
@@ -29,6 +48,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Add header to stream. Stream without header requires manual flags set on decompression
+		/// </summary>
 		public bool IncludeHeader
 		{
 			get
@@ -42,6 +64,10 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Add footer to stream. Footer allows to check on decompression that stream is correct
+		/// </summary>
+		/// <remarks>If on decompression stream is not seekable, footer will be validated only after decompressing data. If stream is seekable, before it.</remarks>
 		public bool IncludeFooter
 		{
 			get
@@ -55,6 +81,10 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Respect <see cref="System.IO.Stream.Flush"/> command. 
+		/// </summary>
+		/// <remarks>If it set, every flush will compress current block of data and Flush it into inner stream. Otherwise, flush commands are ignored</remarks>
 		public bool RespectFlush
 		{
 			get
@@ -68,6 +98,10 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Maximum block size to compress. Larger blocks require more memory, but can produce higher compression
+		/// </summary>
+		/// <remarks>Currently, block sizes from 512 bytes to 16Mb are supported</remarks>
 		public int MaxBlockSize
 		{
 			get
@@ -97,6 +131,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Gets default block size for Stream algorithm
+		/// </summary>
 		public static int DefaultStreamBlockSize
 		{
 			get
@@ -105,6 +142,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Gets default block size for Block algorithm
+		/// </summary>
 		public static int DefaultBlockBlockSize
 		{
 			get
@@ -114,6 +154,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Creates default options for no compression algorithm
+		/// </summary>
 		public static BlazerCompressionOptions CreateNoCompression()
 		{
 			return new BlazerCompressionOptions
@@ -123,6 +166,9 @@ namespace Force.Blazer
 						};
 		}
 
+		/// <summary>
+		/// Creates default options for Stream algorithm
+		/// </summary>
 		public static BlazerCompressionOptions CreateStream()
 		{
 			return new BlazerCompressionOptions
@@ -132,6 +178,9 @@ namespace Force.Blazer
 			};
 		}
 
+		/// <summary>
+		/// Creates default options for Stream algorithm with high compression
+		/// </summary>
 		public static BlazerCompressionOptions CreateStreamHigh()
 		{
 			return new BlazerCompressionOptions
@@ -141,6 +190,9 @@ namespace Force.Blazer
 			};
 		}
 
+		/// <summary>
+		/// Creates default options for Block algorithm
+		/// </summary>
 		public static BlazerCompressionOptions CreateBlock()
 		{
 			return new BlazerCompressionOptions
@@ -150,6 +202,9 @@ namespace Force.Blazer
 			};
 		}
 
+		/// <summary>
+		/// Returns bit flags for current settings
+		/// </summary>
 		public BlazerFlags GetFlags()
 		{
 			var flags = _flags;
@@ -172,6 +227,9 @@ namespace Force.Blazer
 			return (_flags & flag) != 0;
 		}
 
+		/// <summary>
+		/// Instantiates default encoder for specified algoritm
+		/// </summary>
 		public void SetEncoderByAlgorithm(BlazerAlgorithm algorithm)
 		{
 			Encoder = EncoderDecoderFactory.GetEncoder(algorithm);
@@ -179,6 +237,9 @@ namespace Force.Blazer
 
 		private BlazerFileInfo _fileInfo;
 
+		/// <summary>
+		/// Gets or sets information about encoded file
+		/// </summary>
 		public BlazerFileInfo FileInfo
 		{
 			get

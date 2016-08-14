@@ -20,6 +20,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -28,6 +29,8 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <DocumentationFile>bin\Release\Blazer.Net.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -53,7 +56,7 @@
     <Compile Include="Algorithms\BlockDecoderNative.cs" />
     <Compile Include="Algorithms\BlockEncoderNative.cs" />
     <Compile Include="BlazerDecompressionOptions.cs" />
-    <Compile Include="BufferInfo.cs" />
+    <Compile Include="Algorithms\BufferInfo.cs" />
     <Compile Include="Helpers\FileHeaderHelper.cs" />
     <Compile Include="Algorithms\StreamEncoderHigh.cs" />
     <Compile Include="Algorithms\Crc32C\Crc32C.cs" />

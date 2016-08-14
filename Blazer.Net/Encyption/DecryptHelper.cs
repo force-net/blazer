@@ -3,9 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
+using Force.Blazer.Algorithms;
+
 namespace Force.Blazer.Encyption
 {
-	public class NullDecryptHelper
+	internal class NullDecryptHelper
 	{
 		public virtual BufferInfo Decrypt(byte[] data, int offset, int length)
 		{
@@ -27,8 +29,10 @@ namespace Force.Blazer.Encyption
 		}
 	}
 
-	public class DecryptHelper : NullDecryptHelper
+	internal class DecryptHelper : NullDecryptHelper
 	{
+		private const int PbkIterations = 20000;
+
 		private Aes _aes;
 
 		private string _password;
@@ -54,7 +58,7 @@ namespace Force.Blazer.Encyption
 
 			var salt = new byte[8];
 			Buffer.BlockCopy(buffer, 0, salt, 0, 8);
-			var pass = new Rfc2898DeriveBytes(_password, salt, 4096);
+			var pass = new Rfc2898DeriveBytes(_password, salt, PbkIterations);
 			_password = null;
 			_aes = Aes.Create();
 			_aes.Key = pass.GetBytes(32);

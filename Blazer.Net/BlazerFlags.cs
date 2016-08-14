@@ -2,11 +2,18 @@
 
 namespace Force.Blazer
 {
+	/// <summary>
+	/// Header flags for Blazer archive
+	/// </summary>
 	[Flags]
 	public enum BlazerFlags : uint
 	{
+		/// <summary>
+		/// No flags
+		/// </summary>
 		None = 0,
 		
+#pragma warning disable 1591
 		InBlockSize512 = 0,
 		InBlockSize1K = 1,
 		InBlockSize2K = 2,
@@ -44,5 +51,6 @@ namespace Force.Blazer
 
 		// all known flags for this time
 		AllKnownFlags = InBlockSize16M | IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush | EncryptInner | EncryptOuter | OnlyOneFile | 0xf0
+#pragma warning restore 1591
 	}
 }

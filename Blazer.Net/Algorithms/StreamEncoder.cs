@@ -3,11 +3,16 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Force.Blazer.Algorithms
 {
+	/// <summary>
+	/// Encoder of Stream version of Blazer algorithm
+	/// </summary>
+	/// <remarks>Stream version is good for 'live' streamss, slightly slower than Block, but support stream flushing without
+	/// losing compression rate and has very fast decoder</remarks>
 	public class StreamEncoder : IEncoder
 	{
 		private const int HASH_TABLE_BITS = 16;
 		private const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
-		public const int MAX_BACK_REF = (1 << 16) + 256;
+		internal const int MAX_BACK_REF = (1 << 16) + 256;
 		private const int MIN_SEQ_LEN = 4;
 		
 		// carefully selected random number
@@ -15,12 +20,21 @@ namespace Force.Blazer.Algorithms
 
 		private const int SIZE_SHIFT = 1000000000;
 
+		/// <summary>
+		/// Hash array to store dictionary between iterations
+		/// </summary>
 		[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1304:NonPrivateReadonlyFieldsMustBeginWithUpperCaseLetter", Justification = "Reviewed. Suppression is OK here.")]
 		protected readonly int[] _hashArr = new int[HASH_TABLE_LEN + 1];
 
+		/// <summary>
+		/// Buffer to store inbound data between iterations
+		/// </summary>
 		[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Reviewed. Suppression is OK here.")]
 		protected byte[] _bufferIn;
 
+		/// <summary>
+		/// Buffer to temporary store compressed data
+		/// </summary>
 		[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Reviewed. Suppression is OK here.")]
 		protected byte[] _bufferOut;
 
@@ -36,11 +50,18 @@ namespace Force.Blazer.Algorithms
 
 		private int _bufferOutIdx;
 
+		/// <summary>
+		/// Returns additional size for inner buffers. Can be used to store some data or for optimiations
+		/// </summary>
+		/// <returns>Size in bytes</returns>
 		protected virtual int GetAdditionalInSize()
 		{
 			return 0;
 		}
 
+		/// <summary>
+		/// Initializes encoder with information about maximum uncompressed block size
+		/// </summary>
 		public virtual void Init(int maxInBlockSize)
 		{
 			_maxInBlockSize = maxInBlockSize;
@@ -50,6 +71,9 @@ namespace Force.Blazer.Algorithms
 			_bufferOutIdx = 0;
 		}
 
+		/// <summary>
+		/// Encodes given buffer
+		/// </summary>
 		public BufferInfo Encode(byte[] buffer, int offset, int length)
 		{
 			var count = length - offset;
@@ -82,11 +106,17 @@ namespace Force.Blazer.Algorithms
 			return new BufferInfo(_bufferOut, _bufferOutIdx, cnt);
 		}
 
+		/// <summary>
+		/// Returns algorithm id
+		/// </summary>
 		public BlazerAlgorithm GetAlgorithmId()
 		{
 			return BlazerAlgorithm.Stream;
 		}
 
+		/// <summary>
+		/// Compresses block of data. See <see cref="CompressBlockExternal"/> for details
+		/// </summary>
 		protected virtual int CompressBlock(
 			byte[] bufferIn,
 			int bufferInOffset,
@@ -98,6 +128,17 @@ namespace Force.Blazer.Algorithms
 			return CompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferInShift, bufferOut, bufferOutOffset, _hashArr);
 		}
 
+		/// <summary>
+		/// Compresses block of data, can be used independently for byte arrays
+		/// </summary>
+		/// <param name="bufferIn">In buffer</param>
+		/// <param name="bufferInOffset">In buffer offset</param>
+		/// <param name="bufferInLength">In buffer right offset (offset + count)</param>
+		/// <param name="bufferInShift">Additional relative offset for data in hash array</param>
+		/// <param name="bufferOut">Out buffer, should be enough size</param>
+		/// <param name="bufferOutOffset">Out buffer offset</param>
+		/// <param name="hashArr">Hash array with data. Should be same for consecutive blocks of data</param>
+		/// <returns>Bytes count of compressed data</returns>
 		public static int CompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, int bufferInShift, byte[] bufferOut, int bufferOutOffset, int[] hashArr)
 		{
 			var idxOut = bufferOutOffset;
@@ -326,13 +367,21 @@ namespace Force.Blazer.Algorithms
 			return idxOut;
 		}
 
-		public void ShiftHashtable()
+		/// <summary>
+		/// Shifts hashtable data
+		/// </summary>
+		/// <remarks>Use this method to periodically shift positions in array. It is required for streams longer than 2Gb</remarks>
+		protected virtual void ShiftHashtable()
 		{
 			_shiftValue -= SIZE_SHIFT;
 			for (var i = 0; i < HASH_TABLE_LEN; i++)
 				_hashArr[i] = Math.Min(0, _hashArr[i] - SIZE_SHIFT);
 		}
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
 		public virtual void Dispose()
 		{
 		}

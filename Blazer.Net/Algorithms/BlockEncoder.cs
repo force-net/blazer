@@ -3,6 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Force.Blazer.Algorithms
 {
+	/// <summary>
+	/// Decoder of block version of Blazer algorithm
+	/// </summary>
+	/// <remarks>This version provides relative good and fast compression but decompression rate is same as compression</remarks>
 	public class BlockEncoder : IEncoder
 	{
 		private const int HASH_TABLE_BITS = 16;
@@ -11,29 +15,47 @@ namespace Force.Blazer.Algorithms
 		// carefully selected random number
 		private const uint Mul = 1527631329;
 
-		private int _maxInBlockSize;
-
+		/// <summary>
+		/// Storage for output buffer
+		/// </summary>
 		[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Reviewed. Suppression is OK here.")]
 		protected byte[] _bufferOut;
 
+		/// <summary>
+		/// Encodes given buffer
+		/// </summary>
 		public BufferInfo Encode(byte[] buffer, int offset, int length)
 		{
 			var cnt = CompressBlock(buffer, offset, length, _bufferOut, 0);
 			return new BufferInfo(_bufferOut, 0, cnt);
 		}
 
+		/// <summary>
+		/// Initializes encoder with information about maximum uncompressed block size
+		/// </summary>
 		public virtual void Init(int maxInBlockSize)
 		{
-			_maxInBlockSize = maxInBlockSize;
 			_bufferOut = new byte[maxInBlockSize + (maxInBlockSize >> 8) + 3];
 		}
 
-		public virtual int CompressBlock(
+		/// <summary>
+		/// Compresses block of data
+		/// </summary>
+		protected virtual int CompressBlock(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset)
 		{
 			return CompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset);
 		}
 
+		/// <summary>
+		/// Compressed block of data, can be used independently for byte arrays
+		/// </summary>
+		/// <param name="bufferIn">In buffer</param>
+		/// <param name="bufferInOffset">In buffer offset</param>
+		/// <param name="bufferInLength">In buffer right offset (offset + count)</param>
+		/// <param name="bufferOut">Out buffer, should be enough size</param>
+		/// <param name="bufferOutOffset">Out buffer offset</param>
+		/// <returns>Bytes count of compressed data</returns>
 		public static int CompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset)
 		{
 			var hashArr = new int[HASH_TABLE_LEN + 1];
@@ -256,11 +278,18 @@ namespace Force.Blazer.Algorithms
 			return idxOut;
 		}
 
+		/// <summary>
+		/// Returns algorithm id
+		/// </summary>
 		public BlazerAlgorithm GetAlgorithmId()
 		{
 			return BlazerAlgorithm.Block;
 		}
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
 		public virtual void Dispose()
 		{
 		}

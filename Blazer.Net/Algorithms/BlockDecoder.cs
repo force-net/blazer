@@ -2,6 +2,10 @@
 
 namespace Force.Blazer.Algorithms
 {
+	/// <summary>
+	/// Decoder of block version of Blazer algorithm
+	/// </summary>
+	/// <remarks>This version provides relative good and fast compression but decompression rate is same as compression</remarks>
 	public class BlockDecoder : IDecoder
 	{
 		// should be equal with BlockEncoder
@@ -15,6 +19,9 @@ namespace Force.Blazer.Algorithms
 
 		private int _maxUncompressedBlockSize;
 
+		/// <summary>
+		/// Decodes given buffer
+		/// </summary>
 		public BufferInfo Decode(byte[] buffer, int offset, int length, bool isCompressed)
 		{
 			if (!isCompressed)
@@ -24,18 +31,43 @@ namespace Force.Blazer.Algorithms
 			return new BufferInfo(_innerBuffer, 0, outLen);
 		}
 
+		/// <summary>
+		/// Initializes decoder with information about maximum uncompressed block size
+		/// </summary>
 		public void Init(int maxUncompressedBlockSize)
 		{
 			_innerBuffer = new byte[maxUncompressedBlockSize];
 			_maxUncompressedBlockSize = maxUncompressedBlockSize;
 		}
 
+		/// <summary>
+		/// Returns algorithm id
+		/// </summary>
 		public BlazerAlgorithm GetAlgorithmId()
 		{
 			return BlazerAlgorithm.Block;
 		}
 
-		public virtual int DecompressBlock(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
+		/// <summary>
+		/// Decompresses block of data
+		/// </summary>
+		protected virtual int DecompressBlock(
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
+		{
+			return DecompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset, bufferOutLength);
+		}
+
+		/// <summary>
+		/// Decompresses block of data, can be used independently for byte arrays
+		/// </summary>
+		/// <param name="bufferIn">In buffer</param>
+		/// <param name="bufferInOffset">In buffer offset</param>
+		/// <param name="bufferInLength">In buffer right offset (offset + count)</param>
+		/// <param name="bufferOut">Out buffer, should be enough size</param>
+		/// <param name="bufferOutOffset">Out buffer offset</param>
+		/// <param name="bufferOutLength">Out buffer maximum right offset (offset + count)</param>
+		/// <returns>Bytes count of decompressed data</returns>
+		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
 		{
 			var hashArr = new int[HASH_TABLE_LEN + 1];
 			var idxIn = bufferInOffset;
@@ -127,6 +159,10 @@ namespace Force.Blazer.Algorithms
 			return idxOut;
 		}
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
 		public virtual void Dispose()
 		{
 		}

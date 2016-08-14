@@ -3,9 +3,9 @@
 namespace Force.Blazer.Algorithms
 {
 	/// <summary>
-	/// Slow, but better version of stream encoder. 
-	/// Incompleted (working, but can be improved)
+	/// Slow, but with higher compression reate version of <see cref="StreamEncoder"/> of Blazer algorithm. Fully compatible with it.
 	/// </summary>
+	/// <remarks>Incompleted. Can be improved in future. But stable</remarks>
 	public class StreamEncoderHigh : StreamEncoder
 	{
 		private const int HASH_TABLE_BITS = 16;
@@ -22,6 +22,9 @@ namespace Force.Blazer.Algorithms
 
 		private int[] _hashArrPos;
 
+		/// <summary>
+		/// Initializes encoder with information about maximum uncompressed block size
+		/// </summary>
 		public override void Init(int maxInBlockSize)
 		{
 			base.Init(maxInBlockSize);
@@ -31,6 +34,9 @@ namespace Force.Blazer.Algorithms
 			_hashArrPos = new int[HASH_TABLE_LEN + 1];
 		}
 
+		/// <summary>
+		/// Compresses block of data. See <see cref="StreamEncoder.CompressBlockExternal"/> for details
+		/// </summary>
 		protected override int CompressBlock(
 			byte[] bufferIn,
 			int bufferInOffset,
@@ -57,6 +63,18 @@ namespace Force.Blazer.Algorithms
 			return total;
 		}
 
+		/// <summary>
+		/// Compresses block of data, can be used independently for byte arrays
+		/// </summary>
+		/// <param name="bufferIn">In buffer</param>
+		/// <param name="bufferInOffset">In buffer offset</param>
+		/// <param name="bufferInLength">In buffer right offset (offset + count)</param>
+		/// <param name="bufferInShift">Additional relative offset for data in hash array</param>
+		/// <param name="bufferOut">Out buffer, should be enough size</param>
+		/// <param name="bufferOutOffset">Out buffer offset</param>
+		/// <param name="hashArr">Hash arrays with data. Should be same for consecutive blocks of data</param>
+		/// /// <param name="hashArrPos">Position in hash arrays. Should be same for consecutive blocks of data</param>
+		/// <returns>Bytes count of compressed data</returns>
 		public static int CompressBlockHighExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, int bufferInShift, byte[] bufferOut, int bufferOutOffset, int[][] hashArr, int[] hashArrPos)
 		{
 			var idxOut = bufferOutOffset;

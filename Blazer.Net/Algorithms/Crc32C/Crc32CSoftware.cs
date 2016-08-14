@@ -1,5 +1,8 @@
 namespace Force.Blazer.Algorithms.Crc32C
 {
+	/// <summary>
+	/// Software managed Crc32C calculator
+	/// </summary>
 	public class Crc32CSoftware : ICrc32CCalculator
 	{
 		private static readonly uint[] _table = new uint[16 * 256];

@@ -4,8 +4,14 @@ using Force.Blazer.Native;
 
 namespace Force.Blazer.Algorithms
 {
+	/// <summary>
+	/// Factory for creating default encoders and decoders for Blazer algorithmns
+	/// </summary>
 	public class EncoderDecoderFactory
 	{
+		/// <summary>
+		/// Returns decoder for algorithm
+		/// </summary>
 		public static IDecoder GetDecoder(BlazerAlgorithm algorithm)
 		{
 			switch (algorithm)
@@ -17,6 +23,9 @@ namespace Force.Blazer.Algorithms
 			}
 		}
 
+		/// <summary>
+		/// Returns encoder for algorithm
+		/// </summary>
 		public static IEncoder GetEncoder(BlazerAlgorithm algorithm)
 		{
 			switch (algorithm)

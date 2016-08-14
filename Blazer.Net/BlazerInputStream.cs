@@ -9,27 +9,39 @@ using Force.Blazer.Helpers;
 namespace Force.Blazer
 {
 	/// <summary>
-	/// Base version of blazer compression stream. You can use it in advanced scenarios.
+	/// Blazer compression stream implementation
 	/// </summary>
 	public class BlazerInputStream : Stream
 	{
 		#region Stream stub
 
+		/// <summary>
+		/// Not implemented for this stream
+		/// </summary>
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Not implemented for this stream
+		/// </summary>
 		public override void SetLength(long value)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Not implemented for this stream
+		/// </summary>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Cannot read this stream
+		/// </summary>
 		public override bool CanRead
 		{
 			get
@@ -38,6 +50,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Cannot seek this stream
+		/// </summary>
 		public override bool CanSeek
 		{
 			get
@@ -46,6 +61,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Stream is writeable
+		/// </summary>
 		public override bool CanWrite
 		{
 			get
@@ -54,6 +72,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Returns -1
+		/// </summary>
 		public override long Length
 		{
 			get
@@ -62,6 +83,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Cannot set position in this stream
+		/// </summary>
 		public override long Position
 		{
 			get
@@ -106,6 +130,9 @@ namespace Force.Blazer
 
 		private readonly bool _leaveStreamOpen;
 
+		/// <summary>
+		/// Constructs Blazer compression stream
+		/// </summary>
 		public BlazerInputStream(Stream innerStream, BlazerCompressionOptions options)
 		{
 			if (innerStream == null)
@@ -178,6 +205,10 @@ namespace Force.Blazer
 			_encoder.Init(_maxInBlockSize);
 		}
 
+		/// <summary>
+		/// Releases the unmanaged resources used by the <see cref="T:System.IO.Stream"/> and optionally releases the managed resources.
+		/// </summary>
+		/// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
 		protected override void Dispose(bool disposing)
 		{
 			ProcessAndWrite();
@@ -198,6 +229,10 @@ namespace Force.Blazer
 			base.Dispose(disposing);
 		}
 
+		/// <summary>
+		/// Writes control data to stream 
+		/// </summary>
+		/// <remarks>Control data are not compressed and can be used for passing any service information while compressing data without affecting it</remarks>
 		public virtual void WriteControlData(byte[] buffer, int offset, int count)
 		{
 			if (count > 1 << 24)
@@ -222,8 +257,12 @@ namespace Force.Blazer
 			}
 		}
 
-
-
+		/// <summary>
+		/// Writes a sequence of bytes to the current stream and advances the current position within this stream by the number of bytes written.
+		/// </summary>
+		/// <param name="buffer">An array of bytes. This method copies <paramref name="count"/> bytes from <paramref name="buffer"/> to the current stream. </param>
+		/// <param name="offset">The zero-based byte offset in <paramref name="buffer"/> at which to begin copying bytes to the current stream. </param>
+		/// <param name="count">The number of bytes to be written to the current stream. </param>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			while (true)
@@ -244,6 +283,9 @@ namespace Force.Blazer
 			}
 		}
 
+		/// <summary>
+		/// Clears all buffers for this stream and causes any buffered data to be written to the underlying device.
+		/// </summary>
 		public override void Flush()
 		{
 			if (_respectFlush)
