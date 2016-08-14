@@ -307,8 +307,14 @@ namespace Force.Blazer
 				throw new InvalidOperationException("Invalid input stream");
 			if (buf[0] != 'b' || buf[1] != 'L' || buf[2] != 'z')
 				throw new InvalidOperationException("This is not Blazer archive");
-			if (buf[3] != 0x00)
-				throw new InvalidOperationException("Stream was created in new version of Blazer library");
+			if (buf[3] != 0x01)
+			{
+				if (buf[3] > 0x01)
+					throw new InvalidOperationException("Stream was created in newer version of Blazer library");
+				else
+					throw new InvalidOperationException("Stream was created in older version of Blazer library");
+			}
+
 			BlazerFlags flags = (BlazerFlags)(buf[4] | ((uint)buf[5] << 8) | ((uint)buf[6] << 16) | ((uint)buf[7] << 24));
 
 			if ((flags & (~BlazerFlags.AllKnownFlags)) != 0)

@@ -183,7 +183,7 @@ namespace Force.Blazer
 				_header = new byte[]
 							{
 								(byte)'b', (byte)'L', (byte)'z',
-								0x00, // version of file structure
+								0x01, // version of file structure
 								(byte)((((uint)flags) & 0xff) | ((uint)_encoderAlgorithmId << 4)),
 								(byte)(((uint)flags >> 8) & 0xff),
 								(byte)(((uint)flags >> 16) & 0xff),

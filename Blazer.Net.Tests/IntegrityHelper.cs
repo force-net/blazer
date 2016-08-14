@@ -2,6 +2,7 @@
 using System.IO;
 
 using Force.Blazer;
+using Force.Blazer.Algorithms;
 
 using NUnit.Framework;
 
@@ -35,6 +36,14 @@ namespace Blazer.Net.Tests
 			output.CopyTo(ms2);
 			output.Close();
 			return ms2.ToArray();
+		}
+
+		public static int StreamEncoderCheckCompressDecompress(byte[] inData)
+		{
+			var compressed = StreamEncoder.CompressData(inData);
+			var decompressed = StreamDecoder.DecompressData(compressed);
+			CollectionAssert.AreEqual(inData, decompressed);
+			return compressed.Length;
 		}
 	}
 }

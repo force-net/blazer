@@ -129,6 +129,20 @@ namespace Force.Blazer.Algorithms
 		}
 
 		/// <summary>
+		/// Compresses independent block of data
+		/// </summary>
+		/// <param name="bufferIn">In buffer</param>
+		/// <returns>Compressed array</returns>
+		public static byte[] CompressData(byte[] bufferIn)
+		{
+			var hashArr = new int[HASH_TABLE_LEN + 1];
+			var outBuffer = new byte[bufferIn.Length + (bufferIn.Length >> 8) + 3];
+			var cnt = CompressBlockExternal(bufferIn, 0, bufferIn.Length, 0, outBuffer, 0, hashArr);
+			Array.Resize(ref outBuffer, cnt);
+			return outBuffer;
+		}
+
+		/// <summary>
 		/// Compresses block of data, can be used independently for byte arrays
 		/// </summary>
 		/// <param name="bufferIn">In buffer</param>

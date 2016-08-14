@@ -1,7 +1,8 @@
 # Blazer
 Blazer is high-performance archiver for .NET
 
-Currently, it is on develop stage. It is relatively stable, but format and structure has not finished yet. So, you can use it for testing or for streaming transfer (without storing sensitive data).
+Currently, it is on beta stage. It is relatively stable, file format is finished, but there are can be new features (should not break existing data). Also, there are small probability of 
+breaking backward compatibility in case of serious issues (if they will be found).
 
 ## Description
 
@@ -54,6 +55,53 @@ QuickLZ/3           | 38.605%   | 27  MB/s    | 306 MB/s
 Snappy              | 47.847%   | 359 MB/s    | 409 MB/s
 GZip                | 32.191%   | 22  MB/s    | 83 MB/s
 BZip2               | 25.757%   | 4   MB/s    | 16 MB/s
+
+
+Same chart with another order and description:
+
+![Block Size Chart](Doc/Images/chart_comprrate2.png)
+
+This chart shows, that bzip2 is best archiver, but it compression rate is **50** times slower than Blazer. GZip is **10** times slower. So, if you need acceptable compression rate but high speed:
+Blazer is good choice for you. 
+
+## Usage
+
+There are two general variants of using this library. The first one, using a **Blazer.Net library** in your application. This library can be installed from nuget:
+
+```
+Install-Package Blazer.Net
+```
+
+Usage is simple: wrap your real stream with **BlazerInputStream** and write data to it:
+
+```
+using (var bs = new BlazerInputStream(File.Create("compressed.blz"), BlazerCompressionOptions.CreateStream()))
+	File.OpenRead("uncompressed.txt").CopyTo(bs);
+```
+
+Decompression the same:
+
+```
+using (var bs = new BlazerOutputStream(File.Create("compressed.blz")))
+	bs.CopyTo(File.OpenWrite("decompressed.txt"));
+```
+
+Other variant is use Blazer.exe console archiver. 
+ *Documentation in progress*
+
+## Features
+
+Blazer compresses data into stream with special format and with variety of settings (default settings should be ok for you, but in advanced scenarios you can customize it):
+
+* Header of stream contains all requied information for decompression (can be omitted if you know all information and pass it on decompression)
+* Footer to check correctness of stream (if stream is not seekable, will be validated only on end of data)
+* Crc32C checksum validation (on modern CPUs validation speed is about 20Gb per second)
+* Ability to encrypt data
+* Ability to encrypt data without revealing any information (header and footer are also encrypted)
+* Ability to store information about compressing file (in future, several files can be compressed into one stream)
+* Ability to add control information to stream between file blocks. Can be useful for passing some servicing information while compressing long stream of data without affecting it
+* Ability to compress to stdout and read data from stdin (no seeks in stream, if it does not support it)
+* Ability to use non-compressed data in same structure
 
 ## Other important points
 

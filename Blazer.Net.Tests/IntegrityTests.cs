@@ -61,7 +61,7 @@ namespace Blazer.Net.Tests
 
 			// invalid version
 			compressed[3]++;
-			Assert.That(Assert.Throws<InvalidOperationException>(() => IntegrityHelper.DecompressData(compressed)).Message, Is.EqualTo("Stream was created in new version of Blazer library"));
+			Assert.That(Assert.Throws<InvalidOperationException>(() => IntegrityHelper.DecompressData(compressed)).Message, Is.EqualTo("Stream was created in newer version of Blazer library"));
 			compressed[3]--;
 
 			// invalid flags

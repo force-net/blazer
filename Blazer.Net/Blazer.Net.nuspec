@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Blazer.Net</id>
+    <title>Blazer.Net</title>
+    <version>0.8.0</version>
+    <authors>force</authors>
+    <owners>force</owners>
+    <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/force-net/blazer</projectUrl>
+    <!--iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl-->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>
+    Blazer is high-performance, low compression rate archiver. Main usage for working with streams but can be used as general archiver.
+    Compression rate is comparable (slightly better) than LZ4 and Snappy and compression speed is faster than GZip.
+    </description>
+    <releaseNotes>
+	First public release
+    </releaseNotes>
+    <copyright>Copyright by Force 2016</copyright>
+    <tags>.NET fast compression archive</tags>
+  </metadata>
+  <files><file src="bin\Release\Blazer.Net.*" target="lib\net40" /></files>
+</package>

@@ -67,7 +67,21 @@ namespace Force.Blazer.Algorithms
 		protected virtual int DecompressBlock(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
 		{
-			return DecompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset, bufferOutLength);
+			return DecompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, ref bufferOut, bufferOutOffset, bufferOutLength, false);
+		}
+
+		/// <summary>
+		/// Decompresses independent block of data
+		/// </summary>
+		/// <param name="bufferIn">In buffer</param>
+		/// <returns>Decompressed data</returns>
+		public static byte[] DecompressData(
+			byte[] bufferIn)
+		{
+			var outBuffer = new byte[bufferIn.Length * 2];
+			var count = DecompressBlockExternal(bufferIn, 0, bufferIn.Length, ref outBuffer, 0, outBuffer.Length, true);
+			Array.Resize(ref outBuffer, count);
+			return outBuffer;
 		}
 
 		/// <summary>
@@ -79,8 +93,9 @@ namespace Force.Blazer.Algorithms
 		/// <param name="bufferOut">Out buffer, should be enough size</param>
 		/// <param name="bufferOutOffset">Out buffer offset</param>
 		/// <param name="bufferOutLength">Out buffer maximum right offset (offset + count)</param>
+		/// <param name="resizeOutBufferIfNeeded">Resize out buffer if smaller than required</param>
 		/// <returns>Bytes count of decompressed data</returns>
-		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
+		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, ref byte[] bufferOut, int bufferOutOffset, int bufferOutLength, bool resizeOutBufferIfNeeded)
 		{
 			var idxIn = bufferInOffset;
 			var idxOut = bufferOutOffset;
@@ -140,7 +155,13 @@ namespace Force.Blazer.Algorithms
 				var maxOutLength = idxOut + litCnt + seqCnt;
 				if (maxOutLength >= bufferOutLength)
 				{
-					throw new IndexOutOfRangeException("Invalid stream structure");
+					if (resizeOutBufferIfNeeded)
+					{
+						bufferOutLength = Math.Max(bufferOut.Length * 2, maxOutLength);
+						Array.Resize(ref bufferOut, bufferOutLength);
+					}
+					else
+						throw new IndexOutOfRangeException("Invalid stream structure");
 				}
 
 				if (litCnt >= 8)
