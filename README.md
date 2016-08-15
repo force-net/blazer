@@ -61,7 +61,7 @@ Same chart with another order and description:
 
 ![Block Size Chart](Doc/Images/chart_comprrate2.png)
 
-This chart shows, that bzip2 is best archiver, but it compression rate is **50** times slower than Blazer. GZip is **10** times slower. So, if you need acceptable compression rate but high speed:
+This chart shows that bzip2 is best archiver, but it compression rate is **50** times slower than Blazer. GZip is **10** times slower. So, if you need acceptable compression rate but high speed:
 Blazer is good choice for you. 
 
 ## Usage
@@ -82,11 +82,12 @@ using (var bs = new BlazerInputStream(File.Create("compressed.blz"), BlazerCompr
 Decompression the same:
 
 ```
-using (var bs = new BlazerOutputStream(File.Create("compressed.blz")))
+using (var bs = new BlazerOutputStream(File.OpenRead("compressed.blz")))
 	bs.CopyTo(File.OpenWrite("decompressed.txt"));
 ```
 
 Other variant is use Blazer.exe console archiver. 
+
  *Documentation in progress*
 
 ## Features
