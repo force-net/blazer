@@ -6,6 +6,7 @@ packages
 .tools
 private.snk
 sign.cmd
+_releases
 
 # todo: check this folders
 ipch

@@ -88,7 +88,17 @@ using (var bs = new BlazerOutputStream(File.OpenRead("compressed.blz")))
 
 Other variant is use Blazer.exe console archiver. 
 
- *Documentation in progress*
+```
+Compress file test.txt to test.txt.blz
+Blazer test.txt
+
+:: Decompress test.txt.blz
+Blazer -d test.txt
+
+:: Show help
+Blazer -h
+```
+
 
 ## Features
 
