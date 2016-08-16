@@ -55,6 +55,7 @@
     <Compile Include="Algorithms\BlockDecoder.cs" />
     <Compile Include="Algorithms\BlockDecoderNative.cs" />
     <Compile Include="Algorithms\BlockEncoderNative.cs" />
+    <Compile Include="BlazerBlockType.cs" />
     <Compile Include="BlazerDecompressionOptions.cs" />
     <Compile Include="Algorithms\BufferInfo.cs" />
     <Compile Include="Helpers\FileHeaderHelper.cs" />

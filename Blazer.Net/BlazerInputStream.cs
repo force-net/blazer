@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 
 using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
@@ -126,6 +127,8 @@ namespace Force.Blazer
 
 		private readonly byte[] _fileInfoHeader;
 
+		private readonly byte[] _commentHeader;
+
 		private readonly NullEncryptHelper _encryptHelper;
 
 		private readonly bool _leaveStreamOpen;
@@ -201,6 +204,13 @@ namespace Force.Blazer
 				_fileInfoHeader = FileHeaderHelper.GenerateFileHeader(options.FileInfo);
 			}
 
+			if (!string.IsNullOrEmpty(options.Comment))
+			{
+				_commentHeader = Encoding.UTF8.GetBytes(options.Comment);
+				if (_commentHeader.Length > 16 * 1048576)
+					throw new InvalidOperationException("Invalid archive comment");
+			}
+
 			_blockHeader = new byte[_outBufferHeaderSize];
 			_encoder.Init(_maxInBlockSize);
 		}
@@ -219,7 +229,7 @@ namespace Force.Blazer
 			}
 
 			if (_includeFooter)
-				_innerStream.Write(new byte[] { 0xff, (byte)'Z', (byte)'l', (byte)'B' }, 0, 4);
+				_innerStream.Write(new [] { (byte)BlazerBlockType.Footer, (byte)'Z', (byte)'l', (byte)'B' }, 0, 4);
 
 			_innerStream.Flush();
 
@@ -249,11 +259,11 @@ namespace Force.Blazer
 			// some variant of ping message
 			if (count == 0)
 			{
-				_innerStream.Write(new byte[] { 0xf0, 0, 0, 0 }, 0, 4);
+				_innerStream.Write(new byte[] { (byte)BlazerBlockType.ControlDataEmpty, 0, 0, 0 }, 0, 4);
 			}
 			else
 			{
-				WriteOuterBlock(buffer, offset, count + offset, 0xf1);
+				WriteOuterBlock(buffer, offset, count + offset, BlazerBlockType.ControlData);
 			}
 		}
 
@@ -309,7 +319,7 @@ namespace Force.Blazer
 			}
 			else
 			{
-				WriteOuterBlock(info.Buffer, info.Offset, info.Length, _encoderAlgorithmId);
+				WriteOuterBlock(info.Buffer, info.Offset, info.Length, (BlazerBlockType)_encoderAlgorithmId);
 			}
 
 			_innerBufferPos = 0;
@@ -324,12 +334,15 @@ namespace Force.Blazer
 
 				_header = null;
 
+				if (_commentHeader != null)
+					WriteOuterBlock(_commentHeader, 0, _commentHeader.Length, BlazerBlockType.Comment);
+
 				if (_fileInfoHeader != null)
-					WriteOuterBlock(_fileInfoHeader, 0, _fileInfoHeader.Length, 0xfd);
+					WriteOuterBlock(_fileInfoHeader, 0, _fileInfoHeader.Length, BlazerBlockType.FileInfo);
 			}
 		}
 
-		private void WriteOuterBlock(byte[] bufferOut, int offset, int length, byte blockType)
+		private void WriteOuterBlock(byte[] bufferOut, int offset, int length, BlazerBlockType blockType)
 		{
 			if (_header != null)
 			{
@@ -341,7 +354,7 @@ namespace Force.Blazer
 
 			var blockHeader = _blockHeader;
 
-			blockHeader[0] = blockType;
+			blockHeader[0] = (byte)blockType;
 			blockHeader[1] = (byte)o;
 			blockHeader[2] = (byte)(o >> 8);
 			blockHeader[3] = (byte)(o >> 16);

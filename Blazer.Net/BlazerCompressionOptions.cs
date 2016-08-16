@@ -237,6 +237,8 @@ namespace Force.Blazer
 
 		private BlazerFileInfo _fileInfo;
 
+		private string _comment;
+
 		/// <summary>
 		/// Gets or sets information about encoded file
 		/// </summary>
@@ -251,6 +253,23 @@ namespace Force.Blazer
 			{
 				_fileInfo = value;
 				SetFlag(BlazerFlags.OnlyOneFile, _fileInfo != null);
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets archive comment
+		/// </summary>
+		public string Comment
+		{
+			get
+			{
+				return _comment;
+			}
+
+			set
+			{
+				_comment = value;
+				SetFlag(BlazerFlags.IncludeComment, !string.IsNullOrEmpty(value));
 			}
 		}
 	}

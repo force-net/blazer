@@ -52,9 +52,9 @@ namespace Force.Blazer
 		/// <summary>
 		/// Creates file info from file name
 		/// </summary>
-		public static BlazerFileInfo FromFileName(string fileName)
+		public static BlazerFileInfo FromFileName(string fileName, bool leaveFullName)
 		{
-			return FromFileInfo(new FileInfo(fileName), fileName);
+			return FromFileInfo(new FileInfo(fileName), leaveFullName ? fileName : Path.GetFileName(fileName));
 		}
 
 		/// <summary>

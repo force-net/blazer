@@ -8,6 +8,12 @@
 		[CommandLineOption('d', "decompress", "Decompress archive")]
 		public bool Decompress { get; set; }
 
+		[CommandLineOption('l', "list", "List content of archive")]
+		public bool List { get; set; }
+
+		[CommandLineOption('t', "test", "Test archive")]
+		public bool Test { get; set; }
+
 		[CommandLineOption('f', "force", "Overwrite target files without confirmation")]
 		public bool Force { get; set; }
 
@@ -32,7 +38,7 @@
 		[CommandLineOption("blobonly", "Compress to blob (no header and footer)")]
 		public bool BlobOnly { get; set; }
 
-		[CommandLineOption('t', "test", "Test archive")]
-		public bool Test { get; set; }
+		[CommandLineOption("comment", "Add comment to archive")]
+		public string Comment { get; set; }
 	}
 }

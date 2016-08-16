@@ -183,5 +183,17 @@ namespace Blazer.Net.Tests
 				Assert.That(ms1.Length, Is.EqualTo(0));
 			}
 		}
+
+		[Test]
+		public void Comment_Should_Be_Stored()
+		{
+			var data = new byte[123];
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.Comment = "Test Comment Юникоде";
+			// with footer
+			var compressed = IntegrityHelper.CompressData(data, blazerCompressionOptions);
+			var os = new BlazerOutputStream(new MemoryStream(compressed));
+			Assert.That(os.Comment, Is.EqualTo("Test Comment Юникоде"));
+		}
 	}
 }

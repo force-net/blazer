@@ -157,13 +157,13 @@ namespace Force.Blazer.Exe.CommandLine
 			return b.ToString();
 		}
 
-		public string GenerateHeader()
+		public string GenerateHeader(string additionalVersion)
 		{
 			var title = (AssemblyTitleAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyTitleAttribute), true).First();
 			var copy = (AssemblyCopyrightAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyCopyrightAttribute), true).First();
 			var version = (AssemblyFileVersionAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true).First();
 
-			return string.Format("{0} {2}  {1}", title.Title, copy.Copyright, version.Version);
+			return string.Format("{0} {2} ({3})  {1}", title.Title, copy.Copyright, version.Version, additionalVersion);
 		}
 	}
 }
