@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 
 using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
@@ -118,6 +119,8 @@ namespace Force.Blazer
 
 		private int _maxUncompressedBlockSize;
 
+		private int _maxUncompressedBlockSizeOrig;
+
 		private byte[] _innerBuffer;
 
 		private byte[] _decodedBuffer;
@@ -129,6 +132,10 @@ namespace Force.Blazer
 		private byte _algorithmId;
 
 		private bool _shouldHaveFileInfo;
+
+		private bool _shouldHaveComment;
+
+		private string _comment;
 
 		private NullDecryptHelper _decryptHelper;
 
@@ -142,6 +149,39 @@ namespace Force.Blazer
 			get
 			{
 				return _fileInfo;
+			}
+		}
+
+		/// <summary>
+		/// Returns algorithm used in archiver
+		/// </summary>
+		public BlazerAlgorithm Algorithm
+		{
+			get
+			{
+				return _decoder.GetAlgorithmId();
+			}
+		}
+
+		/// <summary>
+		/// Returns max uncompressed block size
+		/// </summary>
+		public int MaxUncompressedBlockSize
+		{
+			get
+			{
+				return _maxUncompressedBlockSizeOrig;
+			}
+		}
+
+		/// <summary>
+		/// Archive comment
+		/// </summary>
+		public string Comment
+		{
+			get
+			{
+				return _comment;
 			}
 		}
 
@@ -187,7 +227,7 @@ namespace Force.Blazer
 			}
 			else
 			{
-				InitByOptions(password);
+				InitByHeader(password);
 			}
 		}
 
@@ -198,11 +238,15 @@ namespace Force.Blazer
 
 			_decoder = decoder;
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);
+			_maxUncompressedBlockSizeOrig = _maxUncompressedBlockSize;
 			_innerBuffer = new byte[_maxUncompressedBlockSize];
 			_decoder.Init(_maxUncompressedBlockSize);
 			_algorithmId = (byte)_decoder.GetAlgorithmId();
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
+			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;
+			_shouldHaveComment = (flags & BlazerFlags.IncludeComment) != 0;
+
 			if (!string.IsNullOrEmpty(password))
 			{
 				_decryptHelper = new DecryptHelper(password);
@@ -215,21 +259,36 @@ namespace Force.Blazer
 			{
 				_decryptHelper = new NullDecryptHelper();
 			}
+
+			_maxUncompressedBlockSize = _decryptHelper.AdjustLength(_maxUncompressedBlockSize);
+
+			ReadCommonBlocks();
 		}
 
-		private void InitByOptions(string password = null)
+		private void InitByHeader(string password = null)
 		{
-			if (!_innerStream.CanRead)
-				throw new InvalidOperationException("Base stream is invalid");
 			_decryptHelper = string.IsNullOrEmpty(password) ? new NullDecryptHelper() : new DecryptHelper(password);
 
 			ReadAndValidateHeader();
 
+			ReadCommonBlocks();
+		}
+
+		private void ReadCommonBlocks()
+		{
+			if (_shouldHaveComment)
+			{
+				var commentBytes = GetNextChunk(true);
+				if (_encodingType != (byte)BlazerBlockType.Comment)
+					throw new InvalidOperationException("Invalid comment header");
+				_comment = Encoding.UTF8.GetString(commentBytes.Buffer, commentBytes.Offset, commentBytes.Count);
+			}
+
 			// todo: refactor this
 			if (_shouldHaveFileInfo)
 			{
-				var fInfo = GetNextChunk(_innerBuffer);
-				if (_encodingType != 0xfd)
+				var fInfo = GetNextChunk(true);
+				if (_encodingType != (byte)BlazerBlockType.FileInfo)
 					throw new InvalidOperationException("Invalid file info header");
 
 				_fileInfo = FileHeaderHelper.ParseFileHeader(fInfo.Buffer, fInfo.Offset, fInfo.Count);
@@ -264,10 +323,10 @@ namespace Force.Blazer
 			if (_decodedBufferOffset == _decodedBufferLength)
 			{
 				if (_isFinished) return 0;
-				var info = GetNextChunk(_innerBuffer);
+				var info = GetNextChunk(false);
 				if (info.Count == 0)
 				{
-					if (_encodingType == 0xf0)
+					if (_encodingType == (byte)BlazerBlockType.ControlDataEmpty)
 					{
 						_controlDataCallback(new byte[0], 0, 0);
 						return Read(buffer, offset, count);
@@ -279,7 +338,7 @@ namespace Force.Blazer
 
 				if (_encodingType != 0 && _encodingType != _algorithmId)
 				{
-					if (_encodingType == 0xf1)
+					if (_encodingType == (byte)BlazerBlockType.ControlData)
 					{
 						_controlDataCallback(info.Buffer, info.Offset, info.Count);
 						return Read(buffer, offset, count);
@@ -322,10 +381,12 @@ namespace Force.Blazer
 
 			_decoder = EncoderDecoderFactory.GetDecoder((BlazerAlgorithm)((((uint)flags) >> 4) & 15));
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);
+			_maxUncompressedBlockSizeOrig = _maxUncompressedBlockSize;
 			_algorithmId = (byte)_decoder.GetAlgorithmId();
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
 			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;
+			_shouldHaveComment = (flags & BlazerFlags.IncludeComment) != 0;
 			if ((flags & BlazerFlags.EncryptInner) != 0)
 			{
 				if (!(_decryptHelper is DecryptHelper)) throw new InvalidOperationException("Stream is encrypted, but password is not provided");
@@ -360,7 +421,7 @@ namespace Force.Blazer
 		private void ValidateFooter(byte[] footer)
 // ReSharper restore UnusedParameter.Local
 		{
-			if (footer[0] != 0xff || footer[1] != (byte)'Z' || footer[2] != (byte)'l' || footer[3] != (byte)'B')
+			if (footer[0] != (byte)BlazerBlockType.Footer || footer[1] != (byte)'Z' || footer[2] != (byte)'l' || footer[3] != (byte)'B')
 				throw new InvalidOperationException("Invalid footer. Possible stream was truncated");
 		}
 
@@ -378,13 +439,13 @@ namespace Force.Blazer
 			_encodingType = _sizeBlock[0];
 
 			// empty footer
-			if (_encodingType == 0xff)
+			if (_encodingType == (byte)BlazerBlockType.Footer)
 			{
 				ValidateFooter(_sizeBlock);
 				return 0;
 			}
 
-			if (_encodingType == 0xf0)
+			if (_encodingType == (byte)BlazerBlockType.ControlDataEmpty)
 			{
 				return 0;
 			}
@@ -403,14 +464,23 @@ namespace Force.Blazer
 			return inLength;
 		}
 
-		private BufferInfo GetNextChunk(byte[] inBuffer)
+		private BufferInfo GetNextChunk(bool allowResizeBuffer)
 		{
+			var inBuffer = _innerBuffer;
 			var inLength = GetNextChunkHeader();
 			if (inLength == 0) return new BufferInfo(null, 0, 0);
 
 			var origInLength = inLength;
 
 			inLength = _decryptHelper.AdjustLength(inLength);
+
+			if (inLength > _maxUncompressedBlockSize)
+			{
+				if (allowResizeBuffer)
+					inBuffer = new byte[inLength];
+				else
+					throw new InvalidOperationException("Invalid block size: " + inLength + ". Max size: " + _maxUncompressedBlockSize);
+			}
 
 			if (!EnsureRead(inBuffer, 0, inLength))
 				throw new InvalidOperationException("Invalid block data");

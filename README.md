@@ -89,7 +89,7 @@ using (var bs = new BlazerOutputStream(File.OpenRead("compressed.blz")))
 Other variant is use Blazer.exe console archiver. 
 
 ```
-Compress file test.txt to test.txt.blz
+:: Compress file test.txt to test.txt.blz
 Blazer test.txt
 
 :: Decompress test.txt.blz
@@ -99,6 +99,31 @@ Blazer -d test.txt
 Blazer -h
 ```
 
+### Far Integration
+
+1. Install [MultiArc](http://plugring.farmanager.com/plugin.php?pid=915) Plugin
+2. Go to Far\Plugins\MultiArc\Formats\custom.ini
+3. Add next lines
+
+```
+[Blazer]
+TypeName=Blazer
+ID=62 4C 7A 01
+IDPos=
+IDOnly=1
+Extension=blz
+List=Blazer -l %%AQ
+Start="^-------"
+End="^------"
+Format0="yyyy tt dd hh mm ss aaaaa zzzzzzzzzzzz  nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+Extract=Blazer -d {-p%%P} -f %%A @%%LQMN
+ExtractWithoutPath=Blazer -d {-p%%P} -f %%AQ @%%LQMN
+Test=Blazer -t {-p%%P} %%AQ @%%LQMN
+Add=Blazer {-p%%P} %%AQ @%%LQMN
+AllFilesMask="*"
+```
+
+4. Restart far
 
 ## Features
 

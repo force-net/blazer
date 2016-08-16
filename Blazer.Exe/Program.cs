@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 using Force.Blazer.Algorithms;
@@ -16,73 +17,104 @@ namespace Force.Blazer.Exe
 #endif
 		}
 
-		public static void Main(string[] args)
+		private static string GetBlazerLibraryVersion()
+		{
+			return "library: "
+					+ ((AssemblyFileVersionAttribute)
+						typeof(BlazerInputStream).Assembly.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true).First()).Version;
+		}
+
+		public static int Main(string[] args)
 		{
 			var options = ParseArguments(args);
 			if (options == null)
-				return;
+				return 0;
 			if (/*options.GetNonParamOptions().Length == 0 ||*/ options.Get() == null || options.Get().Help)
 			{
-				Console.WriteLine(options.GenerateHeader());
+				Console.WriteLine(options.GenerateHeader(GetBlazerLibraryVersion()));
 				Console.WriteLine();
 				Console.WriteLine(options.GenerateHelp());
 				// Console.Error.WriteLine("Please, specify input file name");
-				return;
+				return 0;
 			}
 
 			try
 			{
-				Process(options);
+				return Process(options);
 			}
 			catch (Exception ex)
 			{
 				Console.Error.WriteLine(ex.Message);
+				return 1;
 			}
 		}
 
-		private static void Process(CommandLineParser<BlazerCommandLineOptions> options)
+		private static int Process(CommandLineParser<BlazerCommandLineOptions> options)
 		{
 			var opt = options.Get();
 
 			if (!opt.Stdout)
 			{
-				Console.WriteLine(options.GenerateHeader());
+				Console.WriteLine(options.GenerateHeader(GetBlazerLibraryVersion()));
 				Console.WriteLine();
 			}
 
 			if (opt.Decompress)
 			{
-				ProcessDecompress(options);
+				return ProcessDecompress(options);
 			}
 			else if (opt.Test)
 			{
-				ProcessTest(options);
+				return ProcessTest(options);
+			}
+			else if (opt.List)
+			{
+				return ProcessList(options);
 			}
 			else
 			{
-				ProcessCompress(options);
+				return ProcessCompress(options);
 			}
 		}
 
-		private static void ProcessCompress(CommandLineParser<BlazerCommandLineOptions> options)
+		private static int ProcessCompress(CommandLineParser<BlazerCommandLineOptions> options)
 		{
 			var opt = options.Get();
 
 			var fileName = options.GetNonParamOptions(0) ?? string.Empty;
+			string archiveName = null;
+
+			string customFileName = null;
+
+			var listFile = options.GetNonParamOptions().FirstOrDefault(x => x[0] == '@');
+			if (listFile != null)
+			{
+				listFile = listFile.Remove(0, 1);
+				if (!File.Exists(listFile))
+				{
+					Console.Error.WriteLine("Invalid list file");
+					return 1;
+				}
+
+				archiveName = fileName;
+				// currently we support only one file
+				fileName = File.ReadAllLines(listFile).FirstOrDefault();
+			}
 
 			if (!opt.Stdin && !File.Exists(fileName))
 			{
 				if (fileName == string.Empty)
 				{
 					Console.WriteLine(options.GenerateHelp());
-					return;
+					return 0;
 				}
 
 				Console.Error.WriteLine("Source file " + fileName + " does not exist");
-				return;
+				return 1;
 			}
 
-			var archiveName = fileName + ".blz";
+			if (archiveName == null)
+				archiveName = fileName + ".blz";
 			var truncateOutFile = false;
 			if (!opt.Stdout && File.Exists(archiveName))
 			{
@@ -90,7 +122,7 @@ namespace Force.Blazer.Exe
 				{
 					Console.WriteLine("Archive already exists. Overwrite? (Y)es (N)o");
 					var readLine = Console.ReadLine();
-					if (readLine.Trim().ToLowerInvariant().IndexOf('y') != 0) return;
+					if (readLine.Trim().ToLowerInvariant().IndexOf('y') != 0) return 1;
 				}
 
 				truncateOutFile = true;
@@ -98,13 +130,13 @@ namespace Force.Blazer.Exe
 
 			var mode = (opt.Mode ?? "block").ToLowerInvariant();
 
-
 			BlazerCompressionOptions compressionOptions = BlazerCompressionOptions.CreateStream();
 			compressionOptions.Password = opt.Password;
 			compressionOptions.EncryptFull = opt.EncryptFull;
+			compressionOptions.Comment = opt.Comment;
 
 			if (!opt.NoFileName)
-				compressionOptions.FileInfo = BlazerFileInfo.FromFileName(fileName);
+				compressionOptions.FileInfo = BlazerFileInfo.FromFileName(fileName, false);
 
 			if (mode == "none")
 				compressionOptions.SetEncoderByAlgorithm(BlazerAlgorithm.NoCompress);
@@ -140,24 +172,42 @@ namespace Force.Blazer.Exe
 			{
 				inFile.CopyTo(outFile);
 			}
+
+			return 0;
 		}
 
-		private static void ProcessDecompress(CommandLineParser<BlazerCommandLineOptions> options)
+		private static int ProcessDecompress(CommandLineParser<BlazerCommandLineOptions> options)
 		{
 			var opt = options.Get();
 
 			var archiveName = options.GetNonParamOptions(0) ?? string.Empty;
+
+			string customOutFileName = null;
+
+			var listFile = options.GetNonParamOptions().FirstOrDefault(x => x[0] == '@');
+			if (listFile != null)
+			{
+				listFile = listFile.Remove(0, 1);
+				if (!File.Exists(listFile))
+				{
+					Console.Error.WriteLine("Invalid list file");
+					return 1;
+				}
+
+				// currently we support only one file
+				customOutFileName = File.ReadAllLines(listFile).FirstOrDefault();
+			}
 
 			if (!opt.Stdin && !File.Exists(archiveName))
 			{
 				if (archiveName == string.Empty)
 				{
 					Console.WriteLine(options.GenerateHelp());
-					return;
+					return 0;
 				}
 
 				Console.Error.WriteLine("Archive file " + archiveName + " does not exist");
-				return;
+				return 1;
 			}
 
 			Stream inStreamSource = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(archiveName);
@@ -195,13 +245,15 @@ namespace Force.Blazer.Exe
 				applyFileInfoAfterComplete = true;
 			}
 
+			if (customOutFileName != null) fileName = customOutFileName;
+
 			if (!opt.Stdout && File.Exists(fileName))
 			{
 				if (!opt.Force)
 				{
 					Console.WriteLine("Target " + fileName + " already exists. Overwrite? (Y)es (N)o");
 					var readLine = Console.ReadLine();
-					if (readLine.Trim().ToLowerInvariant().IndexOf('y') != 0) return;
+					if (readLine.Trim().ToLowerInvariant().IndexOf('y') != 0) return 1;
 				}
 
 				new FileStream(fileName, FileMode.Truncate, FileAccess.Write).Close();
@@ -214,9 +266,11 @@ namespace Force.Blazer.Exe
 			}
 
 			if (applyFileInfoAfterComplete) outStream.FileInfo.ApplyToFile();
+
+			return 0;
 		}
 
-		private static void ProcessTest(CommandLineParser<BlazerCommandLineOptions> options)
+		private static int ProcessTest(CommandLineParser<BlazerCommandLineOptions> options)
 		{
 			// todo: refactor. decompress method is similar
 			var opt = options.Get();
@@ -228,11 +282,11 @@ namespace Force.Blazer.Exe
 				if (archiveName == string.Empty)
 				{
 					Console.WriteLine(options.GenerateHelp());
-					return;
+					return 0;
 				}
 
 				Console.Error.WriteLine("Archive file " + archiveName + " does not exist");
-				return;
+				return 1;
 			}
 
 			Stream inStreamSource = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(archiveName);
@@ -259,7 +313,6 @@ namespace Force.Blazer.Exe
 
 			var outStream = new BlazerOutputStream(inStreamSource, decOptions);
 
-
 			using (var inFile = outStream)
 			using (var outFile = new StatStream(new NullStream(), true))
 			{
@@ -268,6 +321,91 @@ namespace Force.Blazer.Exe
 
 			Console.WriteLine();
 			Console.WriteLine("File is correct");
+
+			return 0;
+		}
+
+		private static int ProcessList(CommandLineParser<BlazerCommandLineOptions> options)
+		{
+			// todo: refactor. decompress method is similar
+			var opt = options.Get();
+
+			var archiveName = options.GetNonParamOptions(0) ?? string.Empty;
+
+			if (!opt.Stdin && !File.Exists(archiveName))
+			{
+				if (archiveName == string.Empty)
+				{
+					Console.WriteLine(options.GenerateHelp());
+					return 0;
+				}
+
+				Console.Error.WriteLine("Archive file " + archiveName + " does not exist");
+				return 1;
+			}
+
+			Stream inStreamSource = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(archiveName);
+
+			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
+
+			if (opt.BlobOnly)
+			{
+				decOptions.CompressionOptions = new BlazerCompressionOptions
+				{
+					IncludeCrc = false,
+					IncludeFooter = false,
+					IncludeHeader = false,
+					FileInfo = null,
+					MaxBlockSize = 1 << 24
+				};
+
+				var mode = (opt.Mode ?? "block").ToLowerInvariant();
+				if (mode == "stream" || mode == "streamhigh") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Stream);
+				else if (mode == "none") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.NoCompress);
+				else if (mode == "block") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Block);
+				else throw new InvalidOperationException("Unsupported mode");
+			}
+
+			// format is simplified 7z output
+			using (var outStream = new BlazerOutputStream(inStreamSource, decOptions))
+			{
+				Console.WriteLine("Listing archive: " + (opt.Stdin ? "stdin" : archiveName));
+				Console.WriteLine("Method: " + outStream.Algorithm);
+				Console.WriteLine("Max block size: " + outStream.MaxUncompressedBlockSize);
+				if (outStream.Comment != null)
+				{
+					Console.WriteLine("Comment: " + outStream.Comment);
+				}
+
+				Console.WriteLine();
+				var fi = outStream.FileInfo;
+				if (fi == null)
+				{
+					Console.WriteLine("Missing file information in archive.");
+					return 1;
+				}
+				else
+				{
+					Console.WriteLine("   Date      Time    Attr         Size  Name");
+					Console.WriteLine("------------------- ----- ------------  ------------------------");
+					Console.WriteLine(
+						"{0:yyyy-MM-dd} {1:HH:mm:ss} {2}{3}{4}{5}{6} {7,12}  {8}",
+						fi.CreationTimeUtc.ToLocalTime(),
+						fi.CreationTimeUtc.ToLocalTime(),
+						(fi.Attributes & FileAttributes.Directory) != 0 ? "D" : ".",
+						(fi.Attributes & FileAttributes.ReadOnly) != 0 ? "R" : ".",
+						(fi.Attributes & FileAttributes.Hidden) != 0 ? "H" : ".",
+						(fi.Attributes & FileAttributes.System) != 0 ? "S" : ".",
+						(fi.Attributes & FileAttributes.Archive) != 0 ? "A" : ".",
+						fi.Length,
+						fi.FileName);
+					Console.WriteLine("------------------- ----- ------------  ------------------------");
+					// now, we have only one file, so there are no sense to write total
+					//                                  4854         1018  2 files, 1 folders
+				}
+			}
+
+			return 0;
 		}
 
 		private static Assembly CurrentDomainOnAssemblyResolve(object sender, ResolveEventArgs args)
