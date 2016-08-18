@@ -43,18 +43,18 @@ Compression rate of [Silesia corpus](http://sun.aei.polsl.pl/~sdeor/index.php?pa
 
 Table version:
 
-Name                | Rate      | Compression | Decompression 
---------------------|-----------|-------------|---------------------------
-Blazer Stream       | 42.742%   | 189 MB/s    | 688 MB/s
-Blazer Stream High  | 37.608%   | 20  MB/s    | 735 MB/s
-Blazer Block        | 40.974%   | 222 MB/s    | 278 MB/s
-LZ4                 | 48.028%   | 281 MB/s    | 986 MB/s
-LZ4 HC              | 36.990%   | 28  MB/s    | 1182 MB/s
-QuickLZ/1           | 44.691%   | 206 MB/s    | 227 MB/s
-QuickLZ/3           | 38.605%   | 27  MB/s    | 306 MB/s
-Snappy              | 47.847%   | 359 MB/s    | 409 MB/s
-GZip                | 32.191%   | 22  MB/s    | 83 MB/s
-BZip2               | 25.757%   | 4   MB/s    | 16 MB/s
+Name                | Rate (lower is better)  | Compression | Decompression 
+--------------------|-------------------------|-------------|---------------------------
+Blazer Stream       | 42.742%                 | 189 MB/s    | 688 MB/s
+Blazer Stream High  | 37.608%                 | 20  MB/s    | 735 MB/s
+Blazer Block        | 40.974%                 | 232 MB/s    | 314 MB/s
+LZ4                 | 48.028%                 | 292 MB/s    | 1058 MB/s
+LZ4 HC              | 36.990%                 | 28  MB/s    | 1182 MB/s
+QuickLZ/1           | 44.691%                 | 206 MB/s    | 227 MB/s
+QuickLZ/3           | 38.605%                 | 27  MB/s    | 306 MB/s
+Snappy              | 47.847%                 | 359 MB/s    | 409 MB/s
+GZip                | 32.191%                 | 22  MB/s    | 83 MB/s
+BZip2               | 25.757%                 | 4   MB/s    | 16 MB/s
 
 
 Same chart with another order and description:
@@ -103,7 +103,7 @@ Blazer -h
 
 1. Install [MultiArc](http://plugring.farmanager.com/plugin.php?pid=915) Plugin
 2. Go to Far\Plugins\MultiArc\Formats\custom.ini
-3. Add next lines
+3. Add next lines (Blazer should be in path, or add path to this options)
 
 ```
 [Blazer]
@@ -123,7 +123,6 @@ Add=Blazer {-p%%P} %%AQ @%%LQMN
 AllFilesMask="*"
 ```
 
-4. Restart far
 
 ## Features
 
@@ -138,6 +137,16 @@ Blazer compresses data into stream with special format and with variety of setti
 * Ability to add control information to stream between file blocks. Can be useful for passing some servicing information while compressing long stream of data without affecting it
 * Ability to compress to stdout and read data from stdin (no seeks in stream, if it does not support it)
 * Ability to use non-compressed data in same structure
+
+## Implementation
+
+Currently, Blazer is implementent in C# with full support of standard .NET Streams. Encoders and Decoders are implemented in C# and C both.
+Native variant is faster than managed on ~50%. Library automatically selects native variant if available. If it impossible, safe managed variant is used.
+Stream High algorithm currently on C# only.
+Native implementation does not require additional setup like vcredist and embedded into library.
+
+Console application (Blazer.exe) has embedded Blazer.Net.dll library and use it to compress or decompress files.
+
 
 ## Other important points
 

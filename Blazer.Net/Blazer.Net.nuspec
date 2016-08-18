@@ -11,8 +11,9 @@
     <!--iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl-->
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>
-    Blazer is high-performance, low compression rate archiver. Main usage for working with streams but can be used as general archiver.
-    Compression rate is comparable (slightly better) than LZ4 and Snappy and compression speed is faster than GZip.
+    Blazer is high-performance, low compression archiver.
+    Main usage to work with streams, but can be used as general archiver or as application resource helper.
+    Compression rate is comparable (slightly better) to LZ4 and Snappy and compression speed is really faster than GZip.
     </description>
     <releaseNotes>
 	Added Comment option for archive, more information about archive on decompression, fixed some bugs.
