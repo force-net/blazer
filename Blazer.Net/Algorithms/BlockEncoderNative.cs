@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Force.Blazer.Algorithms
 {
@@ -10,7 +11,18 @@ namespace Force.Blazer.Algorithms
 	{
 		[DllImport(@"Blazer.Native.dll", CallingConvention = CallingConvention.Cdecl)]
 		private static extern int blazer_block_compress_block(
-			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset);
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int[] hashArr);
+
+		private int[] _hashArr;
+
+		/// <summary>
+		/// Initializes encoder with information about maximum uncompressed block size
+		/// </summary>
+		public override void Init(int maxInBlockSize)
+		{
+			base.Init(maxInBlockSize);
+			_hashArr = new int[HASH_TABLE_LEN + 1];
+		}
 
 		/// <summary>
 		/// Compresses block of data
@@ -22,12 +34,16 @@ namespace Force.Blazer.Algorithms
 			byte[] bufferOut,
 			int bufferOutOffset)
 		{
-			return blazer_block_compress_block(
+			var cnt = blazer_block_compress_block(
 				bufferIn,
 				bufferInOffset,
 				bufferInCount,
 				_bufferOut,
-				bufferOutOffset);
+				bufferOutOffset,
+				_hashArr);
+
+			Array.Clear(_hashArr, 0, HASH_TABLE_LEN + 1);
+			return cnt;
 		}
 	}
 }

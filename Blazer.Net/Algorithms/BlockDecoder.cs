@@ -10,7 +10,7 @@ namespace Force.Blazer.Algorithms
 	{
 		// should be equal with BlockEncoder
 		private const int HASH_TABLE_BITS = 16;
-		private const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
+		protected const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
 		private const int MIN_SEQ_LEN = 4;
 		// carefully selected random number
 		private const uint Mul = 1527631329;
@@ -34,7 +34,7 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Initializes decoder with information about maximum uncompressed block size
 		/// </summary>
-		public void Init(int maxUncompressedBlockSize)
+		public virtual void Init(int maxUncompressedBlockSize)
 		{
 			_innerBuffer = new byte[maxUncompressedBlockSize];
 			_maxUncompressedBlockSize = maxUncompressedBlockSize;

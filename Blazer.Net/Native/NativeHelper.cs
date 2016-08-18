@@ -10,6 +10,8 @@ namespace Force.Blazer.Native
 	/// </summary>
 	public static class NativeHelper
 	{
+		private static string NativeSuffix = "0.8.1.7";
+
 		[DllImport("Kernel32.dll")]
 		private static extern IntPtr LoadLibrary(string path);
 
@@ -44,7 +46,7 @@ namespace Force.Blazer.Native
 					assembly.GetManifestResourceStream("Force.Blazer.Resources.Blazer.Native." + architectureSuffix + ".dll"))
 			{
 				var assemblyName = assembly.GetName(false);
-				var dllPath = Path.Combine(Path.GetTempPath(), assemblyName.Name + "." + assemblyName.Version.ToString(4), architectureSuffix);
+				var dllPath = Path.Combine(Path.GetTempPath(), assemblyName.Name + "." + NativeSuffix, architectureSuffix);
 				var fileName = Path.Combine(dllPath, "Blazer.Native.dll");
 				if (!File.Exists(fileName))
 				{

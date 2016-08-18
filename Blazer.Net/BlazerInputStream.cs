@@ -229,7 +229,7 @@ namespace Force.Blazer
 			}
 
 			if (_includeFooter)
-				_innerStream.Write(new [] { (byte)BlazerBlockType.Footer, (byte)'Z', (byte)'l', (byte)'B' }, 0, 4);
+				_innerStream.Write(new[] { (byte)BlazerBlockType.Footer, (byte)'Z', (byte)'l', (byte)'B' }, 0, 4);
 
 			_innerStream.Flush();
 
@@ -277,11 +277,6 @@ namespace Force.Blazer
 		{
 			while (true)
 			{
-				if (_innerBufferPos == _maxInBlockSize)
-				{
-					ProcessAndWrite();
-				}
-
 				var toWrite = Math.Min(_maxInBlockSize - _innerBufferPos, count);
 				if (toWrite == 0)
 					break;
@@ -290,6 +285,11 @@ namespace Force.Blazer
 				_innerBufferPos += toWrite;
 				count -= toWrite;
 				offset += toWrite;
+
+				if (_innerBufferPos == _maxInBlockSize)
+				{
+					ProcessAndWrite();
+				}
 			}
 		}
 

@@ -36,11 +36,44 @@ static inline unsigned char* copy_memory(unsigned char* src, unsigned char* dst,
 	return dst;
 }
 
-extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset)
+int __inline write_len(unsigned char* bufferOut, int c)
 {
-	HANDLE hHeap = GetProcessHeap();
+	if (c < 253) 
+	{
+		*(bufferOut) = (unsigned char)c;
+		return 1;
+	}
+	if (c < 253 + 256)
+	{
+		*(bufferOut) = 253;
+		*(bufferOut + 1) = (unsigned char)(c - 253);
+		return 2;
+	}
+	if (c < 253 + (256 * 256))
+	{
+		*(bufferOut) = 254;
+		c -= 253 + 256;
+		*((unsigned __int16*)(bufferOut + 1)) = c;
+		return 3;
+	}
+// 	else
+	{
+		*(bufferOut) = 255;
+		c -= 253 + (256 * 256);
+		*((unsigned __int32*)(bufferOut + 1)) = c;
+		return 5;
+	}
+}
+
+extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset, __int32* hashArr)
+{
 	// int hashArr[HASH_TABLE_LEN + 1];
-	__int32* hashArr = (__int32*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(__int32) * (HASH_TABLE_LEN + 1));
+	HANDLE hHeap = 0;
+	if (hashArr == 0) 
+	{
+		HANDLE hHeap = GetProcessHeap();
+		hashArr = (__int32*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(__int32) * (HASH_TABLE_LEN + 1));
+	}
 	int idxIn = bufferInOffset;
 	int lastProcessedIdxIn = idxIn;
 	int idxOut = bufferOutOffset;
@@ -97,74 +130,75 @@ extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned ch
 				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxIn + 2;
 			}
 
-			int seqLen;
 			cntLit = origIdxIn - lastProcessedIdxIn;
+			int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN;
 
 			if (backRef >= 256 + 1)
 			{
-				seqLen = idxIn - origIdxIn - MIN_SEQ_LEN/* - 1*/;
-				*(bufferOut++) = (unsigned char)(((MIN(cntLit, 7) << 4) | MIN(seqLen, 15)) | 128);
-
-				*((unsigned __int16*)bufferOut) = hashKey;
-				bufferOut += 2;
+				if (cntLit < 7)
+				{
+					if (seqLen < 15)
+					{
+						*(bufferOut++) = (unsigned char)((cntLit << 4) | seqLen | 128);
+						*((unsigned __int16*)bufferOut) = hashKey;bufferOut += 2;
+					}
+					else
+					{
+						*(bufferOut++) = (unsigned char)((cntLit << 4) | 15 | 128);
+						*((unsigned __int16*)bufferOut) = hashKey;bufferOut += 2;
+						bufferOut += write_len(bufferOut, seqLen - 15);
+					}
+				}
+				else
+				{
+					if (seqLen < 15)
+					{
+						*(bufferOut++) = (unsigned char)((7 << 4) | seqLen | 128);
+						*((unsigned __int16*)bufferOut) = hashKey;bufferOut += 2;
+						bufferOut += write_len(bufferOut, cntLit - 7);
+					}
+					else
+					{
+						*(bufferOut++) = (unsigned char)((7 << 4) | 15 | 128);
+						*((unsigned __int16*)bufferOut) = hashKey;bufferOut += 2;
+						bufferOut += write_len(bufferOut, cntLit - 7);
+						bufferOut += write_len(bufferOut, seqLen - 15);
+					}
+				}
 			}
 			else
 			{
-				seqLen = idxIn - origIdxIn - MIN_SEQ_LEN;
-				*(bufferOut++) = (unsigned char)((MIN(cntLit, 7) << 4) | MIN(seqLen, 15));
-
 				// 1 is always min, should not write it
-				*(bufferOut++) = (unsigned char)(backRef - 1);
-			}
-
-
-			if (cntLit >= 7)
-			{
-				__int32 c = cntLit - 7;
-				if (c < 253) *(bufferOut++) = (unsigned char)c;
-				else if (c < 253 + 256)
+				backRef -= 1;
+				if (cntLit < 7)
 				{
-					*(bufferOut++) = 253;
-					*(bufferOut++) = (unsigned char)(c - 253);
-				}
-				else if (c < 253 + (256 * 256))
-				{
-					*(bufferOut++) = 254;
-					c -= 253 + 256;
-					*((unsigned __int16*)bufferOut) = c;
-					bufferOut += 2;
+					if (seqLen < 15)
+					{
+						*(bufferOut++) = (unsigned char)((cntLit << 4) | seqLen);
+						*(bufferOut++) = (unsigned char)backRef;
+					}
+					else
+					{
+						*(bufferOut++) = (unsigned char)((cntLit << 4) | 15);
+						*(bufferOut++) = (unsigned char)backRef;
+						bufferOut += write_len(bufferOut, seqLen - 15);
+					}
 				}
 				else
 				{
-					*(bufferOut++) = 255;
-					c -= 253 + (256 * 256);
-					*((unsigned __int32*)bufferOut) = c;
-					bufferOut += 4;
-				}
-			}
-
-			if (seqLen >= 15)
-			{
-				__int32 c = seqLen - 15;
-				if (c < 253) *(bufferOut++) = (unsigned char)c;
-				else if (c < 253 + 256)
-				{
-					*(bufferOut++) = 253;
-					*(bufferOut++) = (unsigned char)(c - 253);
-				}
-				else if (c < 253 + (256 * 256))
-				{
-					*(bufferOut++) = 254;
-					c -= 253 + 256;
-					*((unsigned __int16*)bufferOut) = c;
-					bufferOut += 2;
-				}
-				else
-				{
-					*(bufferOut++) = 255;
-					c -= 253 + (256 * 256);
-					*((unsigned __int32*)bufferOut) = c;
-					bufferOut += 4;
+					if (seqLen < 15)
+					{
+						*(bufferOut++) = (unsigned char)((7 << 4) | seqLen);
+						*(bufferOut++) = (unsigned char)backRef;
+						bufferOut += write_len(bufferOut, cntLit - 7);
+					}
+					else
+					{
+						*(bufferOut++) = (unsigned char)((7 << 4) | 15);
+						*(bufferOut++) = (unsigned char)backRef;
+						bufferOut += write_len(bufferOut, cntLit - 7);
+						bufferOut += write_len(bufferOut, seqLen - 15);
+					}
 				}
 			}
 
@@ -187,29 +221,7 @@ extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned ch
 		bufferOut += 2;
 
 		if (cntLit >= 127)
-		{
-			__int32 c = cntLit - 127;
-			if (c < 253) *(bufferOut++) = (unsigned char)c;
-			else if (c < 253 + 256)
-			{
-				*(bufferOut++) = 253;
-				*(bufferOut++) = (unsigned char)(c - 253);
-			}
-			else if (c < 253 + (256 * 256))
-			{
-				*(bufferOut++) = 254;
-				c -= 253 + 256;
-				*((unsigned __int16*)bufferOut) = c;
-				bufferOut += 2;
-			}
-			else
-			{
-				*(bufferOut++) = 255;
-				c -= 253 + (256 * 256);
-				*((unsigned __int32*)bufferOut) = c;
-				bufferOut += 4;
-			}
-		}
+			bufferOut += write_len(bufferOut, cntLit - 127);
 
 		while (cntLit > 0)
 		{
@@ -218,15 +230,20 @@ extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned ch
 		}
 	}
 
-	HeapFree(hHeap, 0, hashArr);
+	if (hHeap != 0)
+		HeapFree(hHeap, 0, hashArr);
 	return (__int32)(bufferOut - bufferOutOrig);
 }
 
-extern "C" __declspec(dllexport) __int32 blazer_block_decompress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset, __int32 bufferOutLength)
+extern "C" __declspec(dllexport) __int32 blazer_block_decompress_block(unsigned char* bufferIn, __int32 bufferInOffset, __int32 bufferInLength, unsigned char* bufferOut, __int32 bufferOutOffset, __int32 bufferOutLength, __int32* hashArr)
 {
-	HANDLE hHeap = GetProcessHeap();
+	HANDLE hHeap = 0;
 	// int hashArr[HASH_TABLE_LEN + 1];
-	__int32* hashArr = (__int32*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(__int32) * (HASH_TABLE_LEN + 1));
+	if (hashArr == 0) 
+	{
+		hHeap = GetProcessHeap();
+		hashArr = (__int32*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(__int32) * (HASH_TABLE_LEN + 1));
+	}
 
 	unsigned char* bufferInEnd = bufferIn + bufferInLength;
 	// __int32 idxIn = bufferInOffset;
@@ -302,31 +319,52 @@ extern "C" __declspec(dllexport) __int32 blazer_block_decompress_block(unsigned 
 			}
 		}
 
-		// TODO: check upper limit
-		int maxOutLength = idxOut + litCnt + seqCnt;
-		if (maxOutLength > bufferOutLength)
-		{
+		if (idxOut + litCnt + seqCnt > bufferOutLength)
 			return -1;
-		}
+
+		if (bufferIn + litCnt > bufferInEnd)
+			return -2;
+
+		copy_memory(bufferIn, bufferOut + idxOut, litCnt);
 
 		while (--litCnt >= 0)
 		{
 			unsigned char v = *(bufferIn++);
 			mulEl = (mulEl << 8) | v;
 			hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxOut;
-			bufferOut[idxOut++] = v;
+			idxOut++;
+			// bufferOut[idxOut++] = v;
 		}
 
 		int inRepIdx = hashIdx >= 0 ? hashArr[hashIdx] - 3 : idxOut - backRef;
-		while (--seqCnt >= 0)
+
+		if (inRepIdx < 0 && seqCnt > 0)
+			return inRepIdx;
+
+		if (seqCnt >= sizeof(int) && inRepIdx + seqCnt < idxOut)
 		{
-			unsigned char v = bufferOut[inRepIdx++];
-			mulEl = (mulEl << 8) | v;
-			hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxOut;
-			bufferOut[idxOut++] = v;
+			copy_memory(bufferOut + inRepIdx, bufferOut + idxOut, seqCnt);
+			while (--seqCnt >= 0)
+			{
+				unsigned char v = bufferOut[inRepIdx++];
+				mulEl = (mulEl << 8) | v;
+				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxOut;
+				idxOut++;
+			}
+		}
+		else 
+		{
+			while (--seqCnt >= 0)
+			{
+				unsigned char v = bufferOut[inRepIdx++];
+				mulEl = (mulEl << 8) | v;
+				hashArr[(mulEl * Mul) >> (32 - HASH_TABLE_BITS)] = idxOut;
+				bufferOut[idxOut++] = v;
+			}
 		}
 	}
 
-	HeapFree(hHeap, 0, hashArr);
+	if (hHeap != 0)
+		HeapFree(hHeap, 0, hashArr);
 	return idxOut;
 }

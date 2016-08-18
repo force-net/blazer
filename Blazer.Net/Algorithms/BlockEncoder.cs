@@ -10,7 +10,7 @@ namespace Force.Blazer.Algorithms
 	public class BlockEncoder : IEncoder
 	{
 		private const int HASH_TABLE_BITS = 16;
-		private const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
+		protected const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
 		private const int MIN_SEQ_LEN = 4;
 		// carefully selected random number
 		private const uint Mul = 1527631329;
@@ -60,7 +60,7 @@ namespace Force.Blazer.Algorithms
 		{
 			var hashArr = new int[HASH_TABLE_LEN + 1];
 			var idxIn = bufferInOffset;
-			var lastProcessedIdxIn = 0;
+			var lastProcessedIdxIn = bufferInOffset;
 			var idxOut = bufferOutOffset;
 
 			int cntLit;

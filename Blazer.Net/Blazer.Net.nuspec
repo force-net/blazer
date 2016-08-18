@@ -3,7 +3,7 @@
   <metadata>
     <id>Blazer.Net</id>
     <title>Blazer.Net</title>
-    <version>0.8.0</version>
+    <version>0.8.1</version>
     <authors>force</authors>
     <owners>force</owners>
     <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
@@ -15,7 +15,7 @@
     Compression rate is comparable (slightly better) than LZ4 and Snappy and compression speed is faster than GZip.
     </description>
     <releaseNotes>
-	First public release
+	Added Comment option for archive, more information about archive on decompression, fixed some bugs.
     </releaseNotes>
     <copyright>Copyright by Force 2016</copyright>
     <tags>.NET fast compression archive</tags>
