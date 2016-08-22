@@ -64,7 +64,7 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Decompresses block of data
 		/// </summary>
-		protected virtual int DecompressBlock(
+		public virtual int DecompressBlock(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
 		{
 			return DecompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, ref bufferOut, bufferOutOffset, bufferOutLength, false);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Force.Blazer.Algorithms
 {
@@ -10,6 +11,10 @@ namespace Force.Blazer.Algorithms
 	{
 		// should be equal with BlockEncoder
 		private const int HASH_TABLE_BITS = 16;
+
+		/// <summary>
+		/// Length of hashtable - 1
+		/// </summary>
 		protected const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
 		private const int MIN_SEQ_LEN = 4;
 		// carefully selected random number
@@ -20,6 +25,23 @@ namespace Force.Blazer.Algorithms
 		private int _maxUncompressedBlockSize;
 
 		/// <summary>
+		/// Hash array to store dictionary between iterations
+		/// </summary>
+		[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1304:NonPrivateReadonlyFieldsMustBeginWithUpperCaseLetter", Justification = "Reviewed. Suppression is OK here.")]
+		protected readonly int[] _hashArr = new int[HASH_TABLE_LEN + 1];
+
+		/// <summary>
+		/// Returns internal hash array
+		/// </summary>
+		public int[] HashArr
+		{
+			get
+			{
+				return _hashArr;
+			}
+		}
+
+		/// <summary>
 		/// Decodes given buffer
 		/// </summary>
 		public BufferInfo Decode(byte[] buffer, int offset, int length, bool isCompressed)
@@ -27,7 +49,7 @@ namespace Force.Blazer.Algorithms
 			if (!isCompressed)
 				return new BufferInfo(buffer, offset, length);
 
-			var outLen = DecompressBlock(buffer, offset, length, _innerBuffer, 0, _maxUncompressedBlockSize);
+			var outLen = DecompressBlock(buffer, offset, length, _innerBuffer, 0, _maxUncompressedBlockSize, true);
 			return new BufferInfo(_innerBuffer, 0, outLen);
 		}
 
@@ -51,10 +73,14 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Decompresses block of data
 		/// </summary>
-		protected virtual int DecompressBlock(
-			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
+		public virtual int DecompressBlock(
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength, bool doCleanup)
 		{
-			return DecompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset, bufferOutLength);
+			var cnt = DecompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset, bufferOutLength, _hashArr);
+			if (doCleanup)
+				Array.Clear(_hashArr, 0, HASH_TABLE_LEN + 1);
+
+			return cnt;
 		}
 
 		/// <summary>
@@ -66,10 +92,11 @@ namespace Force.Blazer.Algorithms
 		/// <param name="bufferOut">Out buffer, should be enough size</param>
 		/// <param name="bufferOutOffset">Out buffer offset</param>
 		/// <param name="bufferOutLength">Out buffer maximum right offset (offset + count)</param>
+		/// <param name="hashArr">Hash array. Can be null.</param>
 		/// <returns>Bytes count of decompressed data</returns>
-		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
+		public static int DecompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength, int[] hashArr)
 		{
-			var hashArr = new int[HASH_TABLE_LEN + 1];
+			hashArr = hashArr ?? new int[HASH_TABLE_LEN + 1];
 			var idxIn = bufferInOffset;
 			var idxOut = bufferOutOffset;
 			uint mulEl = 0;

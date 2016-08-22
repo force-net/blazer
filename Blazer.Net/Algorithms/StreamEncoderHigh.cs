@@ -9,9 +9,16 @@ namespace Force.Blazer.Algorithms
 	public class StreamEncoderHigh : StreamEncoder
 	{
 		private const int HASH_TABLE_BITS = 16;
-		private const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
 
-		private const int HASHARR_CNT = 16;
+		/// <summary>
+		/// Length of Hash Array - 1
+		/// </summary>
+		protected const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
+
+		/// <summary>
+		/// Count of internal hash arrays
+		/// </summary>
+		public const int HASHARR_CNT = 16;
 
 		private const int MIN_SEQ_LEN = 4;
 		
@@ -21,6 +28,28 @@ namespace Force.Blazer.Algorithms
 		private int[][] _hashArr2;
 
 		private int[] _hashArrPos;
+
+		/// <summary>
+		/// Returns internal hash array
+		/// </summary>
+		public int[][] HashArr2
+		{
+			get
+			{
+				return _hashArr2;
+			}
+		}
+
+		/// <summary>
+		/// Returns position in internal hash array
+		/// </summary>
+		public int[] HashArrPos
+		{
+			get
+			{
+				return _hashArrPos;
+			}
+		}
 
 		/// <summary>
 		/// Initializes encoder with information about maximum uncompressed block size
@@ -37,7 +66,7 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Compresses block of data. See <see cref="StreamEncoder.CompressBlockExternal"/> for details
 		/// </summary>
-		protected override int CompressBlock(
+		public override int CompressBlock(
 			byte[] bufferIn,
 			int bufferInOffset,
 			int bufferInLength,

@@ -84,8 +84,6 @@ namespace Force.Blazer.Exe
 			var fileName = options.GetNonParamOptions(0) ?? string.Empty;
 			string archiveName = null;
 
-			string customFileName = null;
-
 			var listFile = options.GetNonParamOptions().FirstOrDefault(x => x[0] == '@');
 			if (listFile != null)
 			{

@@ -55,9 +55,15 @@
     <Compile Include="Algorithms\BlockDecoder.cs" />
     <Compile Include="Algorithms\BlockDecoderNative.cs" />
     <Compile Include="Algorithms\BlockEncoderNative.cs" />
+    <Compile Include="Algorithms\Sampled\BaseSampledCompressor.cs" />
+    <Compile Include="Algorithms\Sampled\BlockSampledCompressor.cs" />
+    <Compile Include="Algorithms\Sampled\ISampledCompressor.cs" />
+    <Compile Include="Algorithms\Sampled\StreamHighSampledCompressor.cs" />
+    <Compile Include="Algorithms\Sampled\StreamSampledCompressor.cs" />
     <Compile Include="BlazerBlockType.cs" />
     <Compile Include="BlazerDecompressionOptions.cs" />
     <Compile Include="Algorithms\BufferInfo.cs" />
+    <Compile Include="BlazerSampledHelper.cs" />
     <Compile Include="Helpers\FileHeaderHelper.cs" />
     <Compile Include="Algorithms\StreamEncoderHigh.cs" />
     <Compile Include="Algorithms\Crc32C\Crc32C.cs" />

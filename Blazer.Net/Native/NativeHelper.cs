@@ -10,14 +10,14 @@ namespace Force.Blazer.Native
 	/// </summary>
 	public static class NativeHelper
 	{
-		private static string NativeSuffix = "0.8.1.7";
+		private const string NativeSuffix = "0.8.2.8";
+
+		private static readonly bool _isNativePossible;
 
 		[DllImport("Kernel32.dll")]
 		private static extern IntPtr LoadLibrary(string path);
 
 		internal static bool IsNativeAvailable { get; private set; }
-
-		private static readonly bool _isNativePossible;
 
 		static NativeHelper()
 		{

@@ -10,6 +10,10 @@ namespace Force.Blazer.Algorithms
 	public class BlockEncoder : IEncoder
 	{
 		private const int HASH_TABLE_BITS = 16;
+		
+		/// <summary>
+		/// Length of hashtable - 1
+		/// </summary>
 		protected const int HASH_TABLE_LEN = (1 << HASH_TABLE_BITS) - 1;
 		private const int MIN_SEQ_LEN = 4;
 		// carefully selected random number
@@ -22,11 +26,28 @@ namespace Force.Blazer.Algorithms
 		protected byte[] _bufferOut;
 
 		/// <summary>
+		/// Hash array to store dictionary between iterations
+		/// </summary>
+		[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1304:NonPrivateReadonlyFieldsMustBeginWithUpperCaseLetter", Justification = "Reviewed. Suppression is OK here.")]
+		protected readonly int[] _hashArr = new int[HASH_TABLE_LEN + 1];
+
+		/// <summary>
+		/// Returns internal hash array
+		/// </summary>
+		public int[] HashArr
+		{
+			get
+			{
+				return _hashArr;
+			}
+		}
+
+		/// <summary>
 		/// Encodes given buffer
 		/// </summary>
 		public BufferInfo Encode(byte[] buffer, int offset, int length)
 		{
-			var cnt = CompressBlock(buffer, offset, length, _bufferOut, 0);
+			var cnt = CompressBlock(buffer, offset, length, _bufferOut, 0, true);
 			return new BufferInfo(_bufferOut, 0, cnt);
 		}
 
@@ -41,10 +62,19 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Compresses block of data
 		/// </summary>
-		protected virtual int CompressBlock(
-			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset)
+		/// <param name="bufferIn">In buffer</param>
+		/// <param name="bufferInOffset">In buffer offset</param>
+		/// <param name="bufferInLength">In buffer right offset (offset + count)</param>
+		/// <param name="bufferOut">Out buffer, should be enough size</param>
+		/// <param name="bufferOutOffset">Out buffer offset</param>
+		/// <param name="doCleanup">Cleanup internal data after compression</param>
+		public virtual int CompressBlock(
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, bool doCleanup)
 		{
-			return CompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset);
+			var cnt = CompressBlockExternal(bufferIn, bufferInOffset, bufferInLength, bufferOut, bufferOutOffset, _hashArr);
+			if (doCleanup)
+				Array.Clear(_hashArr, 0, HASH_TABLE_LEN + 1);
+			return cnt;
 		}
 
 		/// <summary>
@@ -55,10 +85,11 @@ namespace Force.Blazer.Algorithms
 		/// <param name="bufferInLength">In buffer right offset (offset + count)</param>
 		/// <param name="bufferOut">Out buffer, should be enough size</param>
 		/// <param name="bufferOutOffset">Out buffer offset</param>
+		/// <param name="hashArr">Hash array. Can be null.</param>
 		/// <returns>Bytes count of compressed data</returns>
-		public static int CompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset)
+		public static int CompressBlockExternal(byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int[] hashArr)
 		{
-			var hashArr = new int[HASH_TABLE_LEN + 1];
+			hashArr = hashArr ?? new int[HASH_TABLE_LEN + 1];
 			var idxIn = bufferInOffset;
 			var lastProcessedIdxIn = bufferInOffset;
 			var idxOut = bufferOutOffset;
@@ -70,7 +101,7 @@ namespace Force.Blazer.Algorithms
 			uint mulEl = 0;
 
 			if (bufferInLength > 3)
-				mulEl = (uint)(bufferIn[0] << 16 | bufferIn[1] << 8 | bufferIn[2]);
+				mulEl = (uint)(bufferIn[bufferInOffset] << 16 | bufferIn[bufferInOffset + 1] << 8 | bufferIn[bufferInOffset + 2]);
 
 			while (idxIn < iterMax)
 			{

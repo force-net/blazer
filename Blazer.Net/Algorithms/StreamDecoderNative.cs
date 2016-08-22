@@ -26,7 +26,7 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Decompresses block of data
 		/// </summary>
-		protected override int DecompressBlock(
+		public override int DecompressBlock(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength)
 		{
 			var cnt = blazer_stream_decompress_block(

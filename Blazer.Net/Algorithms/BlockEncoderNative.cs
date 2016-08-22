@@ -13,36 +13,28 @@ namespace Force.Blazer.Algorithms
 		private static extern int blazer_block_compress_block(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int[] hashArr);
 
-		private int[] _hashArr;
-
-		/// <summary>
-		/// Initializes encoder with information about maximum uncompressed block size
-		/// </summary>
-		public override void Init(int maxInBlockSize)
-		{
-			base.Init(maxInBlockSize);
-			_hashArr = new int[HASH_TABLE_LEN + 1];
-		}
-
 		/// <summary>
 		/// Compresses block of data
 		/// </summary>
-		protected override int CompressBlock(
+		public override int CompressBlock(
 			byte[] bufferIn,
 			int bufferInOffset,
 			int bufferInCount,
 			byte[] bufferOut,
-			int bufferOutOffset)
+			int bufferOutOffset,
+			bool doCleanup)
 		{
 			var cnt = blazer_block_compress_block(
 				bufferIn,
 				bufferInOffset,
 				bufferInCount,
-				_bufferOut,
+				bufferOut,
 				bufferOutOffset,
 				_hashArr);
 
-			Array.Clear(_hashArr, 0, HASH_TABLE_LEN + 1);
+			if (doCleanup)
+				Array.Clear(_hashArr, 0, HASH_TABLE_LEN + 1);
+
 			return cnt;
 		}
 	}

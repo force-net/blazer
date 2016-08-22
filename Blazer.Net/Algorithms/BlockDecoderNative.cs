@@ -13,25 +13,23 @@ namespace Force.Blazer.Algorithms
 		private static extern int blazer_block_decompress_block(
 			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int bufferOutOffset, int bufferOutLength, int[] hashArr);
 
-		private int[] _hashArr;
-
 		/// <summary>
 		/// Initializes encoder with information about maximum uncompressed block size
 		/// </summary>
 		public override void Init(int maxInBlockSize)
 		{
 			base.Init(maxInBlockSize);
-			_hashArr = new int[HASH_TABLE_LEN + 1];
 		}
 
 		/// <summary>
 		/// Decompresses block of data
 		/// </summary>
-		protected override int DecompressBlock(
-			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength)
+		public override int DecompressBlock(
+			byte[] bufferIn, int bufferInOffset, int bufferInLength, byte[] bufferOut, int idxOut, int bufferOutLength, bool doCleanup)
 		{
 			var res = blazer_block_decompress_block(bufferIn, bufferInOffset, bufferInLength, bufferOut, idxOut, bufferOutLength, _hashArr);
-			Array.Clear(_hashArr, 0, HASH_TABLE_LEN + 1);
+			if (doCleanup)
+				Array.Clear(_hashArr, 0, HASH_TABLE_LEN + 1);
 
 			if (res < 0)
 				throw new InvalidOperationException("Invalid compressed data");

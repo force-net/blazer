@@ -51,10 +51,21 @@ namespace Force.Blazer.Algorithms
 		private int _bufferOutIdx;
 
 		/// <summary>
+		/// Returns internal hash array
+		/// </summary>
+		public int[] HashArr
+		{
+			get
+			{
+				return _hashArr;
+			}
+		}
+
+		/// <summary>
 		/// Returns additional size for inner buffers. Can be used to store some data or for optimiations
 		/// </summary>
 		/// <returns>Size in bytes</returns>
-		protected virtual int GetAdditionalInSize()
+		public virtual int GetAdditionalInSize()
 		{
 			return 0;
 		}
@@ -117,7 +128,7 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Compresses block of data. See <see cref="CompressBlockExternal"/> for details
 		/// </summary>
-		protected virtual int CompressBlock(
+		public virtual int CompressBlock(
 			byte[] bufferIn,
 			int bufferInOffset,
 			int bufferInLength,

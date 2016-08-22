@@ -88,7 +88,7 @@ extern "C" __declspec(dllexport) __int32 blazer_block_compress_block(unsigned ch
 	unsigned __int32 mulEl = 0;
 
 	if (bufferInLength > 3)
-		mulEl = (unsigned __int32)(bufferIn[0] << 16 | bufferIn[1] << 8 | bufferIn[2]);
+		mulEl = (unsigned __int32)(bufferIn[idxIn] << 16 | bufferIn[idxIn + 1] << 8 | bufferIn[idxIn + 2]);
 
 	while (idxIn < iterMax)
 	{
