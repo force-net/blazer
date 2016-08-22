@@ -22,10 +22,10 @@ namespace Force.Blazer.Algorithms.Crc32C
 				throw new InvalidOperationException("You have no right for hardware implementation");
 		}
 
-		uint ICrc32CCalculator.Calculate(byte[] buffer, int offset, int count)
+		uint ICrc32CCalculator.Calculate(uint crc, byte[] buffer, int offset, int count)
 		{
 			var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-			var res = crc32c_append(0, handle.AddrOfPinnedObject() + offset, count);
+			var res = crc32c_append(crc, handle.AddrOfPinnedObject() + offset, count);
 			handle.Free();
 			return res;
 		}

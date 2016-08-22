@@ -40,18 +40,18 @@ namespace Force.Blazer.Benchmark
 
 			//warm-up
 			Crc32C.Crc32CAlgorithm.Compute(new byte[1]);
-			hardware.Calculate(new byte[1], 0, 1);
-			software.Calculate(new byte[1], 0, 1);
+			hardware.Calculate(0, new byte[1], 0, 1);
+			software.Calculate(0, new byte[1], 0, 1);
 
 			var sw = new Stopwatch();
 			sw.Start();
 			var cr = Crc32C.Crc32CAlgorithm.Compute(array);
 			Console.WriteLine("Crc32C.Net: " + ((array.Length / sw.Elapsed.TotalSeconds) / (1024 * 1024)).ToString("0") + " MB/s");
 			sw.Restart();
-			var hr = hardware.Calculate(array, 0, array.Length);
+			var hr = hardware.Calculate(0, array, 0, array.Length);
 			Console.WriteLine("Hardware: " + ((array.Length / sw.Elapsed.TotalSeconds) / (1024 * 1024)).ToString("0") + " MB/s");
 			sw.Restart();
-			var sr = software.Calculate(array, 0, array.Length);
+			var sr = software.Calculate(0, array, 0, array.Length);
 			Console.WriteLine("Software: " + ((array.Length / sw.Elapsed.TotalSeconds) / (1024 * 1024)).ToString("0") + " MB/s");
 			if (hr != cr)
 				Console.WriteLine("Error in hardware realization");

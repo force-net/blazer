@@ -21,9 +21,9 @@ namespace Force.Blazer.Algorithms.Crc32C
 			}
 		}
 
-		uint ICrc32CCalculator.Calculate(byte[] buffer, int offset, int count)
+		uint ICrc32CCalculator.Calculate(uint crc, byte[] buffer, int offset, int count)
 		{
-			uint crcLocal = uint.MaxValue;
+			uint crcLocal = crc ^ uint.MaxValue;
 
 			uint[] table = _table;
 			while (count >= 16)

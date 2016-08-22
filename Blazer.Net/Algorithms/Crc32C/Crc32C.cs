@@ -19,7 +19,23 @@ namespace Force.Blazer.Algorithms.Crc32C
 		/// </summary>
 		public static uint Calculate(byte[] buffer, int offset, int count)
 		{
-			return _calculator.Calculate(buffer, offset, count);
+			return Calculate(0, buffer, offset, count);
+		}
+
+		/// <summary>
+		/// Calculates Crc32C data of given buffer, updates existing crc
+		/// </summary>
+		public static uint Calculate(uint currentCrc, byte[] buffer)
+		{
+			return Calculate(currentCrc, buffer, 0, buffer.Length);
+		}
+
+		/// <summary>
+		/// Calculates Crc32C data of given buffer, updates existing crc
+		/// </summary>
+		public static uint Calculate(uint currentCrc, byte[] buffer, int offset, int count)
+		{
+			return _calculator.Calculate(currentCrc, buffer, offset, count);
 		}
 
 		/// <summary>
@@ -27,7 +43,7 @@ namespace Force.Blazer.Algorithms.Crc32C
 		/// </summary>
 		public static uint Calculate(byte[] buffer)
 		{
-			return _calculator.Calculate(buffer, 0, buffer.Length);
+			return Calculate(0, buffer, 0, buffer.Length);
 		}
 	}
 }

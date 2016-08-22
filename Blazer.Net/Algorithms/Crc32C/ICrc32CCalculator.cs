@@ -8,6 +8,6 @@ namespace Force.Blazer.Algorithms.Crc32C
 		/// <summary>
 		/// Calculates Crc32C data for buffer
 		/// </summary>
-		uint Calculate(byte[] buffer, int offset, int count);
+		uint Calculate(uint crc, byte[] buffer, int offset, int count);
 	}
 }
