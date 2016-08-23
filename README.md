@@ -137,6 +137,7 @@ Blazer compresses data into stream with special format and with variety of setti
 * Ability to add control information to stream between file blocks. Can be useful for passing some servicing information while compressing long stream of data without affecting it
 * Ability to compress to stdout and read data from stdin (no seeks in stream, if it does not support it)
 * Ability to use non-compressed data in same structure
+* **[Compression with pattern](Doc/PatternedCompression.md)**
 
 ## Implementation
 

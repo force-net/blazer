@@ -3,12 +3,16 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 
+using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
+using Force.Blazer.Benchmark.MessagesDto;
 using Force.Blazer.Native;
 
 using ICSharpCode.SharpZipLib.BZip2;
 using ICSharpCode.SharpZipLib.GZip;
+using ICSharpCode.SharpZipLib.Zip.Compression;
 
 using LZ4;
 
@@ -20,9 +24,10 @@ namespace Force.Blazer.Benchmark
     {
 		public static void Main()
 		{
-			BenchCrc32C();
+			BenchPatternedCompression();
+			// BenchCrc32C();
 			//BenchNoCompression();
-			BenchFile("Selesia Total", @"..\..\..\TestFiles\Silesia\ztotal.tar");
+			// BenchFile("Selesia Total", @"..\..\..\TestFiles\Silesia\ztotal.tar");
 			// BenchFile("Log", @"..\..\..\TestFiles\Service.2016-05-01.log");
 			// BenchFile("AdventureWorks (high compressible db)", @"..\..\..\TestFiles\AdventureWorks2012_Data.mdf");
 			// BenchFile("enwiki8 (big text document)", @"..\..\..\TestFiles\enwik8");
@@ -108,9 +113,9 @@ namespace Force.Blazer.Benchmark
 			DoBench("Snappy  ", array, x => new SnappyStream(x, CompressionMode.Compress), x => new SnappyStream(x, CompressionMode.Decompress));
 			DoBench("StdGZip ", array, x => new GZipStream(x, CompressionMode.Compress), x => new GZipStream(x, CompressionMode.Decompress));
 			// very slow for usual running
-			DoBench("BZip2    ", array, x => new BZip2OutputStream(x), x => new BZip2InputStream(x));
-			DoBenchQuickLZ("QuickLZ/1", 1, array);
-			DoBenchQuickLZ("QuickLZ/3", 3, array);
+			// DoBench("BZip2    ", array, x => new BZip2OutputStream(x), x => new BZip2InputStream(x));
+			// DoBenchQuickLZ("QuickLZ/1", 1, array);
+			// DoBenchQuickLZ("QuickLZ/3", 3, array);
 		}
 
 		private static void DoBench(string title, byte[] data, Func<Stream, Stream> createCompressionStream, Func<Stream, Stream> createDecompressionStream)
@@ -221,6 +226,53 @@ namespace Force.Blazer.Benchmark
 				data.Length / (decompressionTime / 1000.0) / 1048576,
 				100.0 * comprArray.Length / data.Length,
 				1.0 * data.Length / comprArray.Length);
+		}
+
+		private static void BenchPatternedCompression()
+		{
+			var data = LogMessage.Generate(10000);
+			var totalSize = data.Sum(x => x.Length);
+
+			var gzipSize = data.Sum(x =>
+				{
+					var deflater = new Deflater();
+					deflater.SetInput(x);
+					deflater.Finish();
+					var cnt = 0;
+					while (!deflater.IsNeedingInput)
+						cnt += deflater.Deflate(new byte[x.Length]);
+					return cnt;
+				});
+
+			var quickLzSize = data.Sum(x => QuickLZ.QuickLZ.compress(x, 1).Length);
+
+			var blStreamIndependent = data.Sum(x => StreamEncoder.CompressData(x).Length);
+
+			var ps = BlazerPatternedHelper.CreateStream();
+			ps.PreparePattern(data[0]);
+
+			var psbest = BlazerPatternedHelper.CreateStream();
+			psbest.PreparePattern(LogMessage.GenerateBestPattern());
+			// var psh = BlazerPatternedHelper.CreateStreamHigh();
+			// psh.PreparePattern(data[0]);
+			// var pb = BlazerPatternedHelper.CreateBlock();
+			// pb.PreparePattern(data[0]);
+
+			var blSPatterned = data.Sum(x => ps.EncodeWithPattern(x).Length);
+			var blSBestPatterned = data.Sum(x => psbest.EncodeWithPattern(x).Length);
+			// var blSHPatterned = data.Sum(x => psh.EncodeWithPattern(x).Length);
+			// var blBPatterned = data.Sum(x => pb.EncodeWithPattern(x).Length);
+
+			Console.WriteLine(Encoding.UTF8.GetString(data[0]));
+			Console.WriteLine();
+			Console.WriteLine("Total:               {0}", totalSize);
+			Console.WriteLine("GZip (Deflate):      {0}\t{1:0.000}", gzipSize, 100.0 * gzipSize / totalSize);
+			Console.WriteLine("QuickLZ:             {0}\t{1:0.000}", quickLzSize, 100.0 * quickLzSize / totalSize);
+			Console.WriteLine("Blazer Independent:  {0}\t{1:0.000}", blStreamIndependent, 100.0 * blStreamIndependent / totalSize);
+			Console.WriteLine("Blazer Pattern:      {0}\t{1:0.000}", blSPatterned, 100.0 * blSPatterned / totalSize);
+			Console.WriteLine("Blazer Pattern Best: {0}\t{1:0.000}", blSBestPatterned, 100.0 * blSBestPatterned / totalSize);
+			// Console.WriteLine("Blazer Pattern SH:   {0}\t{1:0.000}", blSHPatterned, 100.0 * blSHPatterned / totalSize);
+			// Console.WriteLine("Blazer Pattern B:    {0}\t{1:0.000}", blBPatterned, 100.0 * blBPatterned / totalSize);
 		}
     }
 }

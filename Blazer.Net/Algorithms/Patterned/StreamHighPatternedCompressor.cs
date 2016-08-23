@@ -1,19 +1,19 @@
 ﻿using System;
 
-namespace Force.Blazer.Algorithms.Sampled
+namespace Force.Blazer.Algorithms.Patterned
 {
 	/// <summary>
-	/// Sampled Compressor/Decompressor for Blazer Stream High algorithm
+	/// Patterned Compressor/Decompressor for Blazer Stream High algorithm
 	/// </summary>
 	/// <remarks>Method is very slow to use in normal situations. Use only when needed in your specific case</remarks>
-	public class StreamHighSampledCompressor : StreamSampledCompressor
+	public class StreamHighPatternedCompressor : StreamPatternedCompressor
 	{
 		private readonly StreamEncoderHigh _encoder;
 
 		/// <summary>
-		/// Initializes sampled compressor
+		/// Initializes patterned compressor
 		/// </summary>
-		public StreamHighSampledCompressor()
+		public StreamHighPatternedCompressor()
 		{
 			_encoder = new StreamEncoderHigh();
 			_encoder.Init(0);
@@ -59,7 +59,7 @@ namespace Force.Blazer.Algorithms.Sampled
 		/// </summary>
 		protected override int CompressBlock(int countIn, byte[] bufferOut, int offsetOut)
 		{
-			return _encoder.CompressBlock(_innerBuffer, _sampleLength, _sampleLength + countIn, 0, bufferOut, offsetOut + 1);
+			return _encoder.CompressBlock(_innerBuffer, _patternLength, _patternLength + countIn, 0, bufferOut, offsetOut + 1);
 		}
 	}
 }
