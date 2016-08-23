@@ -40,9 +40,11 @@ For example, we can choose messages with this format:
 ```
 
 All fields can be changed, but in some limits (e.g. EventDate is always date, Level is INFO, DEBUG, ERROR or WARN). With these messages results are:
+
 ![Pattern Example](Images/chart_pattern1.png)
 
 Or in table view:
+
 Name                | Rate (lower is better)  
 --------------------|-------------------------
 GZip (only deflated block, without headers)       | 66.266%
