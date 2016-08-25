@@ -43,6 +43,12 @@ namespace Force.Blazer
 		public bool EncyptFull { get; set; }
 
 		/// <summary>
+		/// Disable seeking for inner stream
+		/// </summary>
+		/// <remarks>By default, <see cref="BlazerOutputStream"/> checks is stream seekable. But with this flag this check can be disabled and seek will not be performed for any stream</remarks>
+		public bool NoSeek { get; set; }
+
+		/// <summary>
 		/// Callback on control data block. If is set, will be called for every control data
 		/// </summary>
 		public Action<byte[], int, int> ControlDataCallback { get; set; }

@@ -135,6 +135,8 @@ namespace Force.Blazer
 
 		private bool _shouldHaveComment;
 
+		private readonly bool _noSeek;
+
 		private string _comment;
 
 		private NullDecryptHelper _decryptHelper;
@@ -202,6 +204,7 @@ namespace Force.Blazer
 
 			var password = options.Password;
 			_controlDataCallback = options.ControlDataCallback ?? ((b, o, c) => { });
+			_noSeek = options.NoSeek;
 
 			if (options.EncyptFull)
 			{
@@ -406,7 +409,7 @@ namespace Force.Blazer
 
 			_innerBuffer = new byte[_maxUncompressedBlockSize];
 
-			if (_includeFooter && _innerStream.CanSeek)
+			if (_includeFooter && _innerStream.CanSeek && !_noSeek)
 			{
 				var position = _innerStream.Seek(0, SeekOrigin.Current);
 				_innerStream.Seek(-4, SeekOrigin.End);

@@ -195,5 +195,27 @@ namespace Blazer.Net.Tests
 			var os = new BlazerOutputStream(new MemoryStream(compressed));
 			Assert.That(os.Comment, Is.EqualTo("Test Comment Юникоде"));
 		}
+
+		[Test]
+		public void NoSeek_Should_Be_Respected()
+		{
+			var data1 = new byte[12];
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.LeaveStreamOpen = true;
+			var ms1 = new MemoryStream();
+			// default flush respected
+			using (var b = new BlazerInputStream(ms1, blazerCompressionOptions))
+			{
+				b.Write(data1, 0, data1.Length);
+			}
+
+			var arr = ms1.ToArray();
+			// footer now invalid
+			arr[arr.Length - 3] = 0;
+
+			Assert.Throws<InvalidOperationException>(() => new BlazerOutputStream(new MemoryStream(arr)));
+
+			Assert.DoesNotThrow(() => new BlazerOutputStream(new MemoryStream(arr), new BlazerDecompressionOptions() { NoSeek = true }));
+		}
 	}
 }

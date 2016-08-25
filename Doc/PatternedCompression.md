@@ -1,6 +1,6 @@
 # Compression with preliminary pattern
 
-Imagine, you have lot of similar data. This data can be log messages, soap integration xmls, status logs. And you want to save this data **independently** (if you don't need to do this, you can compress all messages into solid archive. It is best variant for compression, but as result all messages should be extracted if only one needed for view).
+Imagine, you have lot of similar data. This data can be log messages, SOAP integration XMLs, status logs. And you want to save this data **independently** (if you don't need to do this, you can compress all messages into solid archive. It is best variant for compression, but as result all messages should be extracted if only one needed for view).
 These messages can be stored in file system or database, but you want to store each message separately to keep fast access to it.
 
 You want to compress this messages to save storage, but these messages are small and compress not very good as result.

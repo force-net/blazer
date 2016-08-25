@@ -63,6 +63,9 @@ namespace Force.Blazer.Algorithms.Patterned
 			InitHashArray();
 		}
 
+		/// <summary>
+		/// Prepares pattern. Should be called only once for one pattern
+		/// </summary>
 		public void PreparePattern(byte[] pattern)
 		{
 			PreparePattern(pattern, 0, pattern.Length);

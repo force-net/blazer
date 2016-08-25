@@ -3,23 +3,31 @@
   <metadata>
     <id>Blazer.Net</id>
     <title>Blazer.Net</title>
-    <version>0.8.1</version>
+    <version>0.9.0</version>
     <authors>force</authors>
     <owners>force</owners>
     <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
     <projectUrl>https://github.com/force-net/blazer</projectUrl>
     <!--iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl-->
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>Blazer is high-performance, low compression archiver.</summary>
     <description>
     Blazer is high-performance, low compression archiver.
-    Main usage to work with streams, but can be used as general archiver or as application resource helper.
+    Main usage to work with streams, but can be used as general archiver or for reducing application size by compressing it resources.
     Compression rate is comparable (slightly better) to LZ4 and Snappy and compression speed is really faster than GZip.
+	Blazer contains all standard features for archives, but also it is possible to use control commands in stream, encrypt archive, use it as simple (but fast) crc32c calulator, perform patterned compresstion and many others features.
+
+	See project site for detailed information.
     </description>
     <releaseNotes>
-	Added Comment option for archive, more information about archive on decompression, fixed some bugs.
+	Fixed bugs
+	Added some helper methods for compression
+	Improved Crc32C api to use it in external applications if needed (instead of separate library)
+	NoSeek option for decryption
+	Mega-feature: patterned compression, which can reduce compressed size of similar small messages
     </releaseNotes>
     <copyright>Copyright by Force 2016</copyright>
-    <tags>.NET fast compression archive</tags>
+    <tags>.NET fast compression archive crc32c</tags>
   </metadata>
   <files><file src="bin\Release\Blazer.Net.*" target="lib\net40" /></files>
 </package>
