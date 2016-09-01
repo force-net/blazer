@@ -18,7 +18,10 @@ namespace Force.Blazer.Algorithms
 		// carefully selected random number
 		private const uint MUL = 1527631329;
 
-		private const int SIZE_SHIFT = 1000000000;
+		/// <summary>
+		/// Size to shift big data
+		/// </summary>
+		protected const int SIZE_SHIFT = 1000000000;
 
 		/// <summary>
 		/// Hash array to store dictionary between iterations

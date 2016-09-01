@@ -18,7 +18,7 @@ namespace Force.Blazer.Algorithms
 		/// <summary>
 		/// Count of internal hash arrays
 		/// </summary>
-		public const int HASHARR_CNT = 16;
+		public const int HASHARR_CNT = 32;
 
 		private const int MIN_SEQ_LEN = 4;
 		
@@ -64,6 +64,19 @@ namespace Force.Blazer.Algorithms
 		}
 
 		/// <summary>
+		/// Shifts hashtable data
+		/// </summary>
+		/// <remarks>Use this method to periodically shift positions in array. It is required for streams longer than 2Gb</remarks>
+		protected override void ShiftHashtable()
+		{
+			for (var i = 0; i < HASHARR_CNT; i++)
+				for (var k = 0; k < HASH_TABLE_LEN; k++)
+					_hashArr2[i][k] = Math.Min(0, _hashArr2[i][k] - SIZE_SHIFT);
+
+			for (var k = 0; k < HASH_TABLE_LEN; k++) _hashArrPos[k] = _hashArrPos[k] & 0xffff;
+		}
+
+		/// <summary>
 		/// Compresses block of data. See <see cref="StreamEncoder.CompressBlockExternal"/> for details
 		/// </summary>
 		public override int CompressBlock(
@@ -81,15 +94,14 @@ namespace Force.Blazer.Algorithms
 		{
 			if (a + minValToCompare >= iterMax) return -1;
 			if (bufferIn[a + minValToCompare] != bufferIn[b + minValToCompare]) return -1;
-			var total = 0;
+			var origA = a;
 			while (a < iterMax && bufferIn[a] == bufferIn[b])
 			{
 				a++;
 				b++;
-				total++;
 			}
 
-			return total;
+			return a - origA;
 		}
 
 		/// <summary>
@@ -124,6 +136,7 @@ namespace Force.Blazer.Algorithms
 			}
 
 			var iterMax = bufferInLength - 1;
+			var cntToCheck = -1;
 
 			while (idxIn < iterMax)
 			{
@@ -133,20 +146,22 @@ namespace Force.Blazer.Algorithms
 				var hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
 				int hashVal = 0;
 
-				var min = Math.Max(0, hashArrPos[hashKey] - HASHARR_CNT);
+				var hashArrPo = cntToCheck >= 0 ? cntToCheck : hashArrPos[hashKey];
+				var min = Math.Max(0, hashArrPo - HASHARR_CNT);
 				var cnt = 0;
-				var cntToCmp = 0;
-				for (var i = hashArrPos[hashKey] - 1; i >= min; i--)
+				var checkCnt = 3;
+				for (var i = hashArrPo - 1; i >= min; i--)
 				{
 					var hashValLocal = hashArr[i & (HASHARR_CNT - 1)][hashKey] - globalOfs;
 					int backRefLocal = idxIn - hashValLocal;
 					if (backRefLocal < MAX_BACK_REF)
 					{
-						var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn - 3, hashValLocal - 3, cntToCmp) + (backRefLocal < 257 ? 1 : 0);
+						var checkCntLocal = FindMaxSequence(bufferIn, bufferInLength, idxIn - 3, hashValLocal - 3, checkCnt);
+						var cntLocal = checkCntLocal + (backRefLocal < 257 ? 1 : 0);
 						if (cntLocal > cnt)
 						{
 							cnt = cntLocal;
-							cntToCmp = cnt - 1;
+							checkCnt = checkCntLocal;
 							hashVal = hashValLocal;
 						}
 					} 
@@ -167,7 +182,8 @@ namespace Force.Blazer.Algorithms
 							var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn + 1 - 3, hashValLocal - 3, cnt - 1) + (backRefLocal < 257 ? 1 : 0);
 							if (cntLocal > cnt)
 							{
-								cnt = 0;
+								checkCnt = 0;
+								cntToCheck = hashArrPos[hashKeyNext];
 								break;
 							}
 						}
@@ -178,27 +194,22 @@ namespace Force.Blazer.Algorithms
 				// var hashVal = hashArr[hashArrPos[hashKey] & (HASHARR_CNT - 1)][hashKey] - globalOfs;
 				hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn + globalOfs;
 				// var isBig = backRef < 257 ? 0 : 1;
-				if (cnt >= 4)
+				if (checkCnt >= 4)
 				{
+					cntToCheck = -1;
 					var backRef = idxIn - hashVal;
 					cntLit = idxIn - lastProcessedIdxIn;
 
-					hashVal++;
-					idxIn++;
-
-					while (idxIn < bufferInLength)
+					checkCnt -= 3;
+					while (checkCnt-- > 0)
 					{
+						hashVal++;
+						idxIn++;
+
 						elemP0 = bufferIn[idxIn];
 						mulEl = (mulEl << 8) | elemP0;
 						hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
 						hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn + globalOfs;
-
-						if (bufferIn[hashVal] == elemP0)
-						{
-							hashVal++;
-							idxIn++;
-						}
-						else break;
 					}
 
 					int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3/* - isBig*/;
