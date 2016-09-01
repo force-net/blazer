@@ -116,7 +116,6 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_compress_block(unsigned c
 		int hashVal = hashArr[hashKey] - globalOfs;
 		hashArr[hashKey] = idxIn + globalOfs;
 		int backRef = idxIn - hashVal;
-		int isBig = backRef < 257 ? 0 : 1;
 
 		if (hashVal == 0 
 			|| backRef >= MAX_BACK_REF

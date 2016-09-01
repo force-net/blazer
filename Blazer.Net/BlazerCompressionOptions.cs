@@ -132,6 +132,15 @@ namespace Force.Blazer
 		}
 
 		/// <summary>
+		/// Sets max block size from flags
+		/// </summary>
+		public void SetMaxBlockSizeFromFlags(BlazerFlags sizeFlags)
+		{
+			_flags &= ~BlazerFlags.InBlockSize16M;
+			_flags |= sizeFlags & BlazerFlags.InBlockSize16M;
+		}
+
+		/// <summary>
 		/// Gets default block size for Stream algorithm
 		/// </summary>
 		public static int DefaultStreamBlockSize

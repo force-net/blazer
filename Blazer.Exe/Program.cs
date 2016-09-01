@@ -149,13 +149,15 @@ namespace Force.Blazer.Exe
 			}
 			else throw new InvalidOperationException("Invalid compression mode");
 
-			if (opt.BlobOnly)
+			if (!string.IsNullOrEmpty(opt.MaxBlockSize))
 			{
-				compressionOptions.IncludeCrc = false;
-				compressionOptions.IncludeFooter = false;
-				compressionOptions.IncludeHeader = false;
-				compressionOptions.MaxBlockSize = 1 << 24;
-				compressionOptions.FileInfo = null;
+				if (opt.MaxBlockSize.All(char.IsDigit)) compressionOptions.MaxBlockSize = Convert.ToInt32(opt.MaxBlockSize);
+				else
+				{
+					BlazerFlags flagsBlockSize;
+					if (Enum.TryParse("InBlockSize" + opt.MaxBlockSize, true, out flagsBlockSize))
+						compressionOptions.SetMaxBlockSizeFromFlags(flagsBlockSize);
+				}
 			}
 
 			if (truncateOutFile)
@@ -163,12 +165,23 @@ namespace Force.Blazer.Exe
 
 			var outStream = opt.Stdout ? Console.OpenStandardOutput() : new FileStream(archiveName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 
-			Stream blazerStream = new BlazerInputStream(outStream, compressionOptions);
+			Stream blazerStream = opt.DataArray ? (Stream)new MemoryStream() : new BlazerInputStream(outStream, compressionOptions);
 
 			using (var inFile = new StatStream(opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(fileName), !opt.Stdout))
 			using (var outFile = blazerStream)
 			{
 				inFile.CopyTo(outFile);
+			}
+
+			if (opt.DataArray)
+			{
+				var sourceData = (blazerStream as MemoryStream).ToArray();
+				var encoder = compressionOptions.Encoder;
+				encoder.Init(sourceData.Length);
+				var res = encoder.Encode(sourceData, 0, sourceData.Length);
+				outStream.Write(new[] { (byte)sourceData.Length, (byte)(sourceData.Length >> 8), (byte)(sourceData.Length >> 16), (byte)(sourceData.Length >> 24) }, 0, 4);
+				outStream.Write(res.Buffer, res.Offset, res.Count);
+				outStream.Close();
 			}
 
 			return 0;
@@ -212,34 +225,39 @@ namespace Force.Blazer.Exe
 
 			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
 
-			if (opt.BlobOnly)
-			{
-				decOptions.CompressionOptions = new BlazerCompressionOptions
-				{
-					IncludeCrc = false,
-					IncludeFooter = false,
-					IncludeHeader = false,
-					FileInfo = null,
-					MaxBlockSize = 1 << 24
-				};
+			BlazerOutputStream outBlazerStream = null;
+			Stream outStream = null;
 
+			if (opt.DataArray)
+			{
 				var mode = (opt.Mode ?? "block").ToLowerInvariant();
 				if (mode == "stream" || mode == "streamhigh") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Stream);
 				else if (mode == "none") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.NoCompress);
 				else if (mode == "block") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Block);
 				else throw new InvalidOperationException("Unsupported mode");
+				var ms = new MemoryStream();
+				inStreamSource.CopyTo(ms);
+				var comprArray = ms.ToArray();
+				var uncomprLength = comprArray[0] | (comprArray[1] << 8) | (comprArray[2] << 16) | (comprArray[3] << 24);
+				var decoder = decOptions.Decoder;
+				decoder.Init(uncomprLength);
+				var decoded = decoder.Decode(comprArray, 4, comprArray.Length, true);
+				outStream = new MemoryStream(decoded.Buffer, decoded.Offset, decoded.Count);
 			}
-
-			var outStream = new BlazerOutputStream(inStreamSource, decOptions);
+			else
+			{
+				outBlazerStream = new BlazerOutputStream(inStreamSource, decOptions);
+				outStream = outBlazerStream;
+			}
 
 			var fileName = archiveName;
 			var applyFileInfoAfterComplete = false;
 			if (archiveName.EndsWith(".blz")) fileName = fileName.Substring(0, fileName.Length - 4);
 			else fileName += ".unpacked";
 
-			if (outStream.FileInfo != null && !opt.NoFileName)
+			if (outBlazerStream != null && outBlazerStream.FileInfo != null && !opt.NoFileName)
 			{
-				fileName = outStream.FileInfo.FileName;
+				fileName = outBlazerStream.FileInfo.FileName;
 				applyFileInfoAfterComplete = true;
 			}
 
@@ -263,7 +281,7 @@ namespace Force.Blazer.Exe
 				inFile.CopyTo(outFile);
 			}
 
-			if (applyFileInfoAfterComplete) outStream.FileInfo.ApplyToFile();
+			if (applyFileInfoAfterComplete) outBlazerStream.FileInfo.ApplyToFile();
 
 			return 0;
 		}
@@ -291,25 +309,29 @@ namespace Force.Blazer.Exe
 
 			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
 
-			if (opt.BlobOnly)
-			{
-				decOptions.CompressionOptions = new BlazerCompressionOptions
-				{
-					IncludeCrc = false,
-					IncludeFooter = false,
-					IncludeHeader = false,
-					FileInfo = null,
-					MaxBlockSize = 1 << 24
-				};
+			Stream outStream;
 
+			if (opt.DataArray)
+			{
 				var mode = (opt.Mode ?? "block").ToLowerInvariant();
 				if (mode == "stream" || mode == "streamhigh") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Stream);
 				else if (mode == "none") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.NoCompress);
 				else if (mode == "block") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Block);
 				else throw new InvalidOperationException("Unsupported mode");
+				var ms = new MemoryStream();
+				inStreamSource.CopyTo(ms);
+				var comprArray = ms.ToArray();
+				var uncomprLength = comprArray[0] | (comprArray[1] << 8) | (comprArray[2] << 16) | (comprArray[3] << 24);
+				var decoder = decOptions.Decoder;
+				decoder.Init(uncomprLength);
+				// if we do not fail - all ok
+				var decoded = decoder.Decode(comprArray, 4, comprArray.Length, true);
+				outStream = new MemoryStream(decoded.Buffer, decoded.Offset, decoded.Count);
 			}
-
-			var outStream = new BlazerOutputStream(inStreamSource, decOptions);
+			else
+			{
+				outStream = new BlazerOutputStream(inStreamSource, decOptions);
+			}
 
 			using (var inFile = outStream)
 			using (var outFile = new StatStream(new NullStream(), true))
@@ -346,22 +368,10 @@ namespace Force.Blazer.Exe
 
 			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
 
-			if (opt.BlobOnly)
+			if (opt.DataArray)
 			{
-				decOptions.CompressionOptions = new BlazerCompressionOptions
-				{
-					IncludeCrc = false,
-					IncludeFooter = false,
-					IncludeHeader = false,
-					FileInfo = null,
-					MaxBlockSize = 1 << 24
-				};
-
-				var mode = (opt.Mode ?? "block").ToLowerInvariant();
-				if (mode == "stream" || mode == "streamhigh") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Stream);
-				else if (mode == "none") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.NoCompress);
-				else if (mode == "block") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Block);
-				else throw new InvalidOperationException("Unsupported mode");
+				Console.WriteLine("Data array does not contain file info");
+				return 1;
 			}
 
 			// format is simplified 7z output

@@ -35,8 +35,11 @@
 		[CommandLineOption("mode", "Compression mode: none, block (default), stream, streamhigh")]
 		public string Mode { get; set; }
 
-		[CommandLineOption("blobonly", "Compress to blob (no header and footer)")]
-		public bool BlobOnly { get; set; }
+		[CommandLineOption("maxblocksize", "Specifies maximum size of data chunk")]
+		public string MaxBlockSize { get; set; }
+
+		[CommandLineOption("dataarray", "Compress to solid array with 4-bytes length prefix")]
+		public bool DataArray { get; set; }
 
 		[CommandLineOption("comment", "Add comment to archive")]
 		public string Comment { get; set; }
