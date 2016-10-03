@@ -260,8 +260,28 @@ namespace Force.Blazer
 
 			set
 			{
+				if (GetFlag(BlazerFlags.MultipleFiles) && value != null)
+					throw new InvalidOperationException("Do not set FileInfo in multiple files mode mode");
 				_fileInfo = value;
 				SetFlag(BlazerFlags.OnlyOneFile, _fileInfo != null);
+			}
+		}
+
+		/// <summary>
+		/// Marks, that archive can contains multiple file, pass file info through <see cref="BlazerInputStream.WriteFileInfo"/>
+		/// </summary>
+		public bool MultipleFiles
+		{
+			get
+			{
+				return GetFlag(BlazerFlags.MultipleFiles);
+			}
+
+			set
+			{
+				if (GetFlag(BlazerFlags.OnlyOneFile) && value)
+					throw new InvalidOperationException("Do not set FileInfo in this mode");
+				SetFlag(BlazerFlags.MultipleFiles, value);
 			}
 		}
 

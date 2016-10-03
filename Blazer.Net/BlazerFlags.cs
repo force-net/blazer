@@ -43,7 +43,8 @@ namespace Force.Blazer
 
 		NoFileInfo = 0,
 		OnlyOneFile = 32768,
-		NotImplementedMultipleFiles = 65536,
+		MultipleFiles = 65536,
+		NotImplementedMultipleIndexedFiles = OnlyOneFile | MultipleFiles,
 		IncludeComment = 131072,
 
 		Default = IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush,
@@ -51,7 +52,7 @@ namespace Force.Blazer
 		DefaultBlock = Default | InBlockSize2M,
 
 		// all known flags for this time
-		AllKnownFlags = InBlockSize16M | IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush | EncryptInner | EncryptOuter | OnlyOneFile | IncludeComment | 0xf0
+		AllKnownFlags = InBlockSize16M | IncludeCrc | IncludeHeader | IncludeFooter | RespectFlush | EncryptInner | EncryptOuter | OnlyOneFile | MultipleFiles | IncludeComment | 0xf0
 #pragma warning restore 1591
 	}
 }

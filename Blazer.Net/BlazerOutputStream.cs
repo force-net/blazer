@@ -133,6 +133,8 @@ namespace Force.Blazer
 
 		private bool _shouldHaveFileInfo;
 
+		private bool _haveMultipleFiles;
+
 		private bool _shouldHaveComment;
 
 		private readonly bool _noSeek;
@@ -144,13 +146,24 @@ namespace Force.Blazer
 		private BlazerFileInfo _fileInfo;
 
 		/// <summary>
-		/// Returns information about compressed file, if exitsts
+		/// Returns information about compressed file, if exists (and only one file in archive)
 		/// </summary>
 		public BlazerFileInfo FileInfo
 		{
 			get
 			{
 				return _fileInfo;
+			}
+		}
+
+		/// <summary>
+		/// Returns information about multiple files mode in archive
+		/// </summary>
+		public bool HaveMultipleFiles
+		{
+			get
+			{
+				return _haveMultipleFiles;
 			}
 		}
 
@@ -191,6 +204,8 @@ namespace Force.Blazer
 
 		private Action<byte[], int, int> _controlDataCallback { get; set; }
 
+		private Action<BlazerFileInfo> _fileInfoCallback { get; set; }
+
 		/// <summary>
 		/// Constructs Blazer decompression stream
 		/// </summary>
@@ -204,6 +219,7 @@ namespace Force.Blazer
 
 			var password = options.Password;
 			_controlDataCallback = options.ControlDataCallback ?? ((b, o, c) => { });
+			_fileInfoCallback = options.FileInfoCallback ?? (f => { });
 			_noSeek = options.NoSeek;
 
 			if (options.EncyptFull)
@@ -248,6 +264,7 @@ namespace Force.Blazer
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
 			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;
+			_haveMultipleFiles = (flags & BlazerFlags.MultipleFiles) != 0;
 			_shouldHaveComment = (flags & BlazerFlags.IncludeComment) != 0;
 
 			if (!string.IsNullOrEmpty(password))
@@ -295,6 +312,7 @@ namespace Force.Blazer
 					throw new InvalidOperationException("Invalid file info header");
 
 				_fileInfo = FileHeaderHelper.ParseFileHeader(fInfo.Buffer, fInfo.Offset, fInfo.Count);
+				_fileInfoCallback(_fileInfo);
 			}
 		}
 
@@ -346,8 +364,15 @@ namespace Force.Blazer
 						_controlDataCallback(info.Buffer, info.Offset, info.Count);
 						return Read(buffer, offset, count);
 					}
-
-					throw new InvalidOperationException("Invalid header");
+					else if (_encodingType == (byte)BlazerBlockType.FileInfo)
+					{
+						// current file info
+						_fileInfo = FileHeaderHelper.ParseFileHeader(info.Buffer, info.Offset, info.Count);
+						_fileInfoCallback(_fileInfo);
+						return Read(buffer, offset, count);
+					}
+					else
+						throw new InvalidOperationException("Invalid header");
 				}
 
 				var decoded = _decoder.Decode(info.Buffer, info.Offset, info.Length, _encodingType != 0);
@@ -389,6 +414,7 @@ namespace Force.Blazer
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
 			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;
+			_haveMultipleFiles = (flags & BlazerFlags.MultipleFiles) != 0;
 			_shouldHaveComment = (flags & BlazerFlags.IncludeComment) != 0;
 			if ((flags & BlazerFlags.EncryptInner) != 0)
 			{

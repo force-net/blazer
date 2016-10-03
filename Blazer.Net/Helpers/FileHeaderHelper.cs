@@ -6,9 +6,16 @@ namespace Force.Blazer.Helpers
 {
 	internal static class FileHeaderHelper
 	{
+		private static readonly DateTime MinFileTime = new DateTime(1601, 1, 1);
+
 		public static byte[] GenerateFileHeader(BlazerFileInfo info)
 		{
 			if (info.FileName == null) info.FileName = string.Empty;
+			if (info.CreationTimeUtc < MinFileTime)
+				info.CreationTimeUtc = MinFileTime;
+			if (info.LastWriteTimeUtc < MinFileTime)
+				info.LastWriteTimeUtc = MinFileTime;
+
 			var fileNameBytes = Encoding.UTF8.GetBytes(info.FileName);
 			var totalHeader = new byte[8 + // length
 					8 + // creation time

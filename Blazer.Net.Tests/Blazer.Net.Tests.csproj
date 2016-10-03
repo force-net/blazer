@@ -52,6 +52,7 @@
     <Compile Include="EncryptionTests.cs" />
     <Compile Include="IntegrityHelper.cs" />
     <Compile Include="IntegrityTests.cs" />
+    <Compile Include="MultipleFilesTests.cs" />
     <Compile Include="OptionsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PatternedCompressionTests.cs" />

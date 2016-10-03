@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 
 using Force.Blazer.Algorithms;
 using Force.Blazer.Exe.CommandLine;
@@ -81,7 +82,7 @@ namespace Force.Blazer.Exe
 		{
 			var opt = options.Get();
 
-			var fileName = options.GetNonParamOptions(0) ?? string.Empty;
+			string[] fileNamesMultiple = new[] { options.GetNonParamOptions(0) ?? string.Empty };
 			string archiveName = null;
 
 			var listFile = options.GetNonParamOptions().FirstOrDefault(x => x[0] == '@');
@@ -94,25 +95,26 @@ namespace Force.Blazer.Exe
 					return 1;
 				}
 
-				archiveName = fileName;
-				// currently we support only one file
-				fileName = File.ReadAllLines(listFile).FirstOrDefault();
+				archiveName = fileNamesMultiple[0];
+				fileNamesMultiple = File.ReadAllLines(listFile).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
 			}
 
-			if (!opt.Stdin && !File.Exists(fileName))
+			if (!opt.Stdin && fileNamesMultiple.Any(x => !File.Exists(x) && !Directory.Exists(x)))
 			{
-				if (fileName == string.Empty)
+				if (fileNamesMultiple[0] == string.Empty)
 				{
 					Console.WriteLine(options.GenerateHelp());
 					return 0;
 				}
 
-				Console.Error.WriteLine("Source file " + fileName + " does not exist");
+				if (fileNamesMultiple.Length == 1)
+					Console.Error.WriteLine("Source file " + fileNamesMultiple[0] + " does not exist");
+				else Console.Error.WriteLine("One or more of files to compress does not exist");
 				return 1;
 			}
 
 			if (archiveName == null)
-				archiveName = fileName + ".blz";
+				archiveName = fileNamesMultiple[0] + ".blz";
 			var truncateOutFile = false;
 			if (!opt.Stdout && File.Exists(archiveName))
 			{
@@ -134,7 +136,18 @@ namespace Force.Blazer.Exe
 			compressionOptions.Comment = opt.Comment;
 
 			if (!opt.NoFileName)
-				compressionOptions.FileInfo = BlazerFileInfo.FromFileName(fileName, false);
+			{
+				if (fileNamesMultiple.Length == 1) compressionOptions.FileInfo = BlazerFileInfo.FromFileName(fileNamesMultiple[0], false);
+				else compressionOptions.MultipleFiles = true;
+			}
+			else
+			{
+				if (fileNamesMultiple.Length > 1)
+				{
+					Console.Error.WriteLine("No File Name option cannot be used with multiple files");
+					return 1;
+				}
+			}
 
 			if (mode == "none")
 				compressionOptions.SetEncoderByAlgorithm(BlazerAlgorithm.NoCompress);
@@ -165,17 +178,16 @@ namespace Force.Blazer.Exe
 
 			var outStream = opt.Stdout ? Console.OpenStandardOutput() : new FileStream(archiveName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 
-			Stream blazerStream = opt.DataArray ? (Stream)new MemoryStream() : new BlazerInputStream(outStream, compressionOptions);
-
-			using (var inFile = new StatStream(opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(fileName), !opt.Stdout))
-			using (var outFile = blazerStream)
-			{
-				inFile.CopyTo(outFile);
-			}
-
 			if (opt.DataArray)
 			{
-				var sourceData = (blazerStream as MemoryStream).ToArray();
+				byte[] sourceData;
+				using (var sourceStream = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(fileNamesMultiple[0]))
+				{
+					var tmpOutStream = new MemoryStream();
+					sourceStream.CopyTo(tmpOutStream);
+					sourceData = tmpOutStream.ToArray();
+				}
+
 				var encoder = compressionOptions.Encoder;
 				encoder.Init(sourceData.Length);
 				var res = encoder.Encode(sourceData, 0, sourceData.Length);
@@ -183,7 +195,35 @@ namespace Force.Blazer.Exe
 				outStream.Write(res.Buffer, res.Offset, res.Count);
 				outStream.Close();
 			}
+			else
+			{
+				using (var outFile = new BlazerInputStream(outStream, compressionOptions))
+				{
+					if (opt.Stdin)
+					{
+						using (var inFile = new StatStream(Console.OpenStandardInput(), !opt.Stdout)) inFile.CopyTo(outFile);
+					}
+					else
+					{
+						foreach (var fileName in fileNamesMultiple)
+						{
+							if (fileNamesMultiple.Length > 1)
+							{
+								var blazerFileInfo = BlazerFileInfo.FromFileName(fileName, !opt.NoPathName);
+								outFile.WriteFileInfo(blazerFileInfo);
+								if ((blazerFileInfo.Attributes & FileAttributes.Directory) != 0)
+									continue;
+							}
 
+							using (var inFile = new StatStream(File.OpenRead(fileName), !opt.Stdout))
+							{
+								inFile.CopyTo(outFile);
+							}
+						}
+					}
+				}
+			}
+			
 			return 0;
 		}
 
@@ -193,7 +233,7 @@ namespace Force.Blazer.Exe
 
 			var archiveName = options.GetNonParamOptions(0) ?? string.Empty;
 
-			string customOutFileName = null;
+			string[] customOutFileNames = null;
 
 			var listFile = options.GetNonParamOptions().FirstOrDefault(x => x[0] == '@');
 			if (listFile != null)
@@ -205,8 +245,7 @@ namespace Force.Blazer.Exe
 					return 1;
 				}
 
-				// currently we support only one file
-				customOutFileName = File.ReadAllLines(listFile).FirstOrDefault();
+				customOutFileNames = File.ReadAllLines(listFile).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
 			}
 
 			if (!opt.Stdin && !File.Exists(archiveName))
@@ -226,7 +265,50 @@ namespace Force.Blazer.Exe
 			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
 
 			BlazerOutputStream outBlazerStream = null;
-			Stream outStream = null;
+			Stream outStream;
+			BlazerFileInfo prevFile = null;
+			Stream[] outFile = { null };
+			decOptions.FileInfoCallback = fInfo =>
+				{
+					if (prevFile != null)
+					{
+						outFile[0].Flush();
+						outFile[0].Close();
+						outFile[0] = null;
+						prevFile.ApplyToFile();
+						prevFile = null;
+					}
+
+					var fInfoFileName = fInfo.FileName;
+					if (customOutFileNames != null && !customOutFileNames.Contains(fInfoFileName))
+						return;
+
+					prevFile = fInfo;
+					if ((fInfo.Attributes & FileAttributes.Directory) != 0)
+					{
+						if (!opt.NoPathName && !Directory.Exists(fInfoFileName)) Directory.CreateDirectory(fInfoFileName);
+					}
+					else
+					{
+						if (opt.NoPathName) fInfoFileName = Path.GetFileName(fInfoFileName);
+
+						if (File.Exists(fInfoFileName))
+						{
+							if (!opt.Force)
+							{
+								Console.WriteLine("Target " + fInfoFileName + " already exists. Overwrite? (Y)es (N)o");
+								var readLine = Console.ReadLine();
+								if (readLine.Trim().ToLowerInvariant().IndexOf('y') != 0) return;
+							}
+
+							new FileStream(fInfoFileName, FileMode.Truncate, FileAccess.Write).Close();
+						}
+
+						var directoryName = Path.GetDirectoryName(fInfoFileName);
+						if (!string.IsNullOrEmpty(directoryName)) Directory.CreateDirectory(directoryName);
+						outFile[0] = new StatStream(new FileStream(fInfoFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
+					}
+				};
 
 			if (opt.DataArray)
 			{
@@ -251,37 +333,37 @@ namespace Force.Blazer.Exe
 			}
 
 			var fileName = archiveName;
-			var applyFileInfoAfterComplete = false;
 			if (archiveName.EndsWith(".blz")) fileName = fileName.Substring(0, fileName.Length - 4);
 			else fileName += ".unpacked";
 
 			if (outBlazerStream != null && outBlazerStream.FileInfo != null && !opt.NoFileName)
 			{
 				fileName = outBlazerStream.FileInfo.FileName;
-				applyFileInfoAfterComplete = true;
 			}
 
-			if (customOutFileName != null) fileName = customOutFileName;
-
-			if (!opt.Stdout && File.Exists(fileName))
-			{
-				if (!opt.Force)
-				{
-					Console.WriteLine("Target " + fileName + " already exists. Overwrite? (Y)es (N)o");
-					var readLine = Console.ReadLine();
-					if (readLine.Trim().ToLowerInvariant().IndexOf('y') != 0) return 1;
-				}
-
-				new FileStream(fileName, FileMode.Truncate, FileAccess.Write).Close();
-			}
+			if (opt.Stdout) outFile[0] = Console.OpenStandardOutput();
+			// we haven't received an file info from callback
+			if (outFile[0] == null)
+				outFile[0] = new StatStream(new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
 
 			using (var inFile = outStream)
-			using (var outFile = opt.Stdout ? Console.OpenStandardOutput() : new StatStream(new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true))
 			{
-				inFile.CopyTo(outFile);
+				var buf = new byte[81920];
+				int cnt = 1;
+				while (cnt > 0)
+				{
+					cnt = inFile.Read(buf, 0, buf.Length);
+					if (outFile[0] != null)
+						outFile[0].Write(buf, 0, cnt);
+				}
 			}
 
-			if (applyFileInfoAfterComplete) outBlazerStream.FileInfo.ApplyToFile();
+			if (prevFile != null)
+			{
+				outFile[0].Flush();
+				outFile[0].Close();
+				prevFile.ApplyToFile();
+			}
 
 			return 0;
 		}
@@ -367,6 +449,26 @@ namespace Force.Blazer.Exe
 			Stream inStreamSource = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(archiveName);
 
 			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
+			StringBuilder header = new StringBuilder();
+			header.AppendLine("   Date      Time    Attr         Size  Name");
+			header.AppendLine("------------------- ----- ------------  ------------------------");
+			bool[] headerWritten = { false };
+			decOptions.FileInfoCallback = fi =>
+				{
+					var s = string.Format(
+						"{0:yyyy-MM-dd} {1:HH:mm:ss} {2}{3}{4}{5}{6} {7,12}  {8}",
+						fi.CreationTimeUtc.ToLocalTime(),
+						fi.CreationTimeUtc.ToLocalTime(),
+						(fi.Attributes & FileAttributes.Directory) != 0 ? "D" : ".",
+						(fi.Attributes & FileAttributes.ReadOnly) != 0 ? "R" : ".",
+						(fi.Attributes & FileAttributes.Hidden) != 0 ? "H" : ".",
+						(fi.Attributes & FileAttributes.System) != 0 ? "S" : ".",
+						(fi.Attributes & FileAttributes.Archive) != 0 ? "A" : ".",
+						fi.Length,
+						fi.FileName);
+					if (!headerWritten[0]) header.AppendLine(s);
+					else Console.WriteLine(s);
+				};
 
 			if (opt.DataArray)
 			{
@@ -386,29 +488,21 @@ namespace Force.Blazer.Exe
 				}
 
 				Console.WriteLine();
+				Console.Write(header);
+				headerWritten[0] = true;
 				var fi = outStream.FileInfo;
-				if (fi == null)
+				if (fi == null && !outStream.HaveMultipleFiles)
 				{
 					Console.WriteLine("Missing file information in archive.");
 					return 1;
 				}
 				else
 				{
-					Console.WriteLine("   Date      Time    Attr         Size  Name");
+					// while we read, we will write info
+					if (outStream.HaveMultipleFiles)
+						outStream.CopyTo(new NullStream());
 					Console.WriteLine("------------------- ----- ------------  ------------------------");
-					Console.WriteLine(
-						"{0:yyyy-MM-dd} {1:HH:mm:ss} {2}{3}{4}{5}{6} {7,12}  {8}",
-						fi.CreationTimeUtc.ToLocalTime(),
-						fi.CreationTimeUtc.ToLocalTime(),
-						(fi.Attributes & FileAttributes.Directory) != 0 ? "D" : ".",
-						(fi.Attributes & FileAttributes.ReadOnly) != 0 ? "R" : ".",
-						(fi.Attributes & FileAttributes.Hidden) != 0 ? "H" : ".",
-						(fi.Attributes & FileAttributes.System) != 0 ? "S" : ".",
-						(fi.Attributes & FileAttributes.Archive) != 0 ? "A" : ".",
-						fi.Length,
-						fi.FileName);
-					Console.WriteLine("------------------- ----- ------------  ------------------------");
-					// now, we have only one file, so there are no sense to write total
+					// todo: think about total line
 					//                                  4854         1018  2 files, 1 folders
 				}
 			}

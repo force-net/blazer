@@ -38,14 +38,16 @@ namespace Force.Blazer
 		/// Creates file info from <see cref="FileInfo"/> with optional custom relative name
 		/// </summary>
 		/// <remarks>If no relative name is passed, file name without path is used as file name. Otherwise, this relative name</remarks>
-		public static BlazerFileInfo FromFileInfo(FileInfo info, string relativeFileName = null)
+		public static BlazerFileInfo FromFileInfo(FileSystemInfo info, string relativeFileName = null)
 		{
 			var bfi = new BlazerFileInfo();
 			bfi.FileName = relativeFileName ?? info.Name;
 			bfi.Attributes = info.Attributes;
 			bfi.CreationTimeUtc = info.CreationTimeUtc;
 			bfi.LastWriteTimeUtc = info.LastWriteTimeUtc;
-			bfi.Length = info.Length;
+			var fileInfo = info as FileInfo;
+			// directory has zero size
+			bfi.Length = fileInfo != null ? fileInfo.Length : 0;
 			return bfi;
 		}
 
@@ -54,7 +56,11 @@ namespace Force.Blazer
 		/// </summary>
 		public static BlazerFileInfo FromFileName(string fileName, bool leaveFullName)
 		{
-			return FromFileInfo(new FileInfo(fileName), leaveFullName ? fileName : Path.GetFileName(fileName));
+			if (File.Exists(fileName))
+				return FromFileInfo(new FileInfo(fileName), leaveFullName ? fileName : Path.GetFileName(fileName));
+			if (Directory.Exists(fileName))
+				return FromFileInfo(new DirectoryInfo(fileName), leaveFullName ? fileName : Path.GetFileName(fileName));
+			throw new FileNotFoundException("File not found", fileName);
 		}
 
 		/// <summary>
@@ -62,7 +68,7 @@ namespace Force.Blazer
 		/// </summary>
 		public void ApplyToFile()
 		{
-			if (!File.Exists(FileName))
+			if (!File.Exists(FileName) && !Directory.Exists(FileName))
 				return;
 			File.SetAttributes(FileName, Attributes);
 			File.SetCreationTimeUtc(FileName, CreationTimeUtc);

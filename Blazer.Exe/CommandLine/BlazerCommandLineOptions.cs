@@ -32,6 +32,9 @@
 		[CommandLineOption("nofilename", "Do not (re)store file name")]
 		public bool NoFileName { get; set; }
 
+		[CommandLineOption("nopathname", "Do not (re)store information about paths")]
+		public bool NoPathName { get; set; }
+
 		[CommandLineOption("mode", "Compression mode: none, block (default), stream, streamhigh")]
 		public string Mode { get; set; }
 

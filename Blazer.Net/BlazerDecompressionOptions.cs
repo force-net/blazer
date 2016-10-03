@@ -54,6 +54,11 @@ namespace Force.Blazer
 		public Action<byte[], int, int> ControlDataCallback { get; set; }
 
 		/// <summary>
+		/// Callbacks on new file info
+		/// </summary>
+		public Action<BlazerFileInfo> FileInfoCallback { get; set; }
+
+		/// <summary>
 		/// Create default options
 		/// </summary>
 		public static BlazerDecompressionOptions CreateDefault()

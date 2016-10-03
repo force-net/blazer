@@ -116,11 +116,12 @@ List=Blazer -l %%AQ
 Start="^-------"
 End="^------"
 Format0="yyyy tt dd hh mm ss aaaaa zzzzzzzzzzzz  nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
-Extract=Blazer -d {-p%%P} -f %%A @%%LQMN
-ExtractWithoutPath=Blazer -d {-p%%P} -f %%AQ @%%LQMN
+Extract=Blazer -d {-p%%P} -f %%AQ @%%LQMN
+ExtractWithoutPath=Blazer -d {-p%%P} --nopathname -f %%AQ @%%LQMN
 Test=Blazer -t {-p%%P} %%AQ @%%LQMN
 Add=Blazer {-p%%P} %%AQ @%%LQMN
 AllFilesMask="*"
+
 ```
 
 

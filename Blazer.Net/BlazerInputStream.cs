@@ -133,6 +133,10 @@ namespace Force.Blazer
 
 		private readonly bool _leaveStreamOpen;
 
+		private readonly bool _isMultipleFiles;
+
+		private bool _multipleFilesFileInfoSet;
+
 		/// <summary>
 		/// Constructs Blazer compression stream
 		/// </summary>
@@ -203,6 +207,8 @@ namespace Force.Blazer
 			{
 				_fileInfoHeader = FileHeaderHelper.GenerateFileHeader(options.FileInfo);
 			}
+
+			_isMultipleFiles = (flags & BlazerFlags.MultipleFiles) != 0;
 
 			if (!string.IsNullOrEmpty(options.Comment))
 			{
@@ -275,6 +281,9 @@ namespace Force.Blazer
 		/// <param name="count">The number of bytes to be written to the current stream. </param>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
+			if (_isMultipleFiles && !_multipleFilesFileInfoSet)
+				throw new InvalidOperationException("In multiple files mode first block should be file info");
+
 			while (true)
 			{
 				var toWrite = Math.Min(_maxInBlockSize - _innerBufferPos, count);
@@ -291,6 +300,23 @@ namespace Force.Blazer
 					ProcessAndWrite();
 				}
 			}
+		}
+
+		/// <summary>
+		/// In multiple files mode adds information about new file (and implies that previous is finished)
+		/// </summary>
+		public void WriteFileInfo(BlazerFileInfo info)
+		{
+			if (!_isMultipleFiles)
+				throw new InvalidOperationException("Current stream options does not support this operation");
+			if (info == null)
+				throw new ArgumentNullException("info");
+			_multipleFilesFileInfoSet = true;
+			
+			// write all buffered data
+			ProcessAndWrite();
+			var fileInfoBytes = FileHeaderHelper.GenerateFileHeader(info);
+			WriteOuterBlock(fileInfoBytes, 0, fileInfoBytes.Length, BlazerBlockType.FileInfo);
 		}
 
 		/// <summary>
