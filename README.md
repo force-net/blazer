@@ -120,6 +120,7 @@ Extract=Blazer -d {-p%%P} -f %%AQ @%%LQMN
 ExtractWithoutPath=Blazer -d {-p%%P} --nopathname -f %%AQ @%%LQMN
 Test=Blazer -t {-p%%P} %%AQ @%%LQMN
 Add=Blazer {-p%%P} %%AQ @%%LQMN
+AddRecurse=Blazer {-p%%P} %%AQ @%%LQMN
 AllFilesMask="*"
 
 ```
@@ -139,6 +140,7 @@ Blazer compresses data into stream with special format and with variety of setti
 * Ability to compress to stdout and read data from stdin (no seeks in stream, if it does not support it)
 * Ability to use non-compressed data in same structure
 * **[Compression with pattern](Doc/PatternedCompression.md)**
+* Archive with one or multiple files (command-line utility has only basic support for multi-file archives).
 
 ## Implementation
 

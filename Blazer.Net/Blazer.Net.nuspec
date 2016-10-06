@@ -3,7 +3,7 @@
   <metadata>
     <id>Blazer.Net</id>
     <title>Blazer.Net</title>
-    <version>0.9.0</version>
+    <version>0.9.2</version>
     <authors>force</authors>
     <owners>force</owners>
     <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
@@ -20,11 +20,9 @@
 	See project site for detailed information.
     </description>
     <releaseNotes>
-	Fixed bugs
-	Added some helper methods for compression
-	Improved Crc32C api to use it in external applications if needed (instead of separate library)
-	NoSeek option for decryption
-	Mega-feature: patterned compression, which can reduce compressed size of similar small messages
+    StreamHigh optimized and its compression rate slightly improved.
+    Added MaxBlockSize option from flags.
+    Added support for multiple files in one archive.
     </releaseNotes>
     <copyright>Copyright by Force 2016</copyright>
     <tags>.NET fast compression archive crc32c</tags>

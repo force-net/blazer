@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 using Force.Blazer.Algorithms;
 using Force.Blazer.Exe.CommandLine;
@@ -84,6 +86,7 @@ namespace Force.Blazer.Exe
 
 			string[] fileNamesMultiple = new[] { options.GetNonParamOptions(0) ?? string.Empty };
 			string archiveName = null;
+			var hasUnexistingFiles = false;
 
 			var listFile = options.GetNonParamOptions().FirstOrDefault(x => x[0] == '@');
 			if (listFile != null)
@@ -97,9 +100,10 @@ namespace Force.Blazer.Exe
 
 				archiveName = fileNamesMultiple[0];
 				fileNamesMultiple = File.ReadAllLines(listFile).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
+				fileNamesMultiple = ExpandFilesInList(fileNamesMultiple, out hasUnexistingFiles);
 			}
 
-			if (!opt.Stdin && fileNamesMultiple.Any(x => !File.Exists(x) && !Directory.Exists(x)))
+			if (!opt.Stdin && hasUnexistingFiles)
 			{
 				if (fileNamesMultiple[0] == string.Empty)
 				{
@@ -233,7 +237,7 @@ namespace Force.Blazer.Exe
 
 			var archiveName = options.GetNonParamOptions(0) ?? string.Empty;
 
-			string[] customOutFileNames = null;
+			Regex[] customOutFileNames = null;
 
 			var listFile = options.GetNonParamOptions().FirstOrDefault(x => x[0] == '@');
 			if (listFile != null)
@@ -245,7 +249,9 @@ namespace Force.Blazer.Exe
 					return 1;
 				}
 
-				customOutFileNames = File.ReadAllLines(listFile).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
+				customOutFileNames = File.ReadAllLines(listFile).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim())
+					.Select(x => new Regex(new string(x.SelectMany(y => char.IsLetterOrDigit(y) ? new[] { y } : (y == '*' ? new[] { '.', '*' } : new[] { '\\', y })).ToArray())))
+					.ToArray();
 			}
 
 			if (!opt.Stdin && !File.Exists(archiveName))
@@ -272,15 +278,19 @@ namespace Force.Blazer.Exe
 				{
 					if (prevFile != null)
 					{
-						outFile[0].Flush();
-						outFile[0].Close();
-						outFile[0] = null;
+						if (outFile[0] != null)
+						{
+							outFile[0].Flush();
+							outFile[0].Close();
+							outFile[0] = null;
+						}
+
 						prevFile.ApplyToFile();
 						prevFile = null;
 					}
 
 					var fInfoFileName = fInfo.FileName;
-					if (customOutFileNames != null && !customOutFileNames.Contains(fInfoFileName))
+					if (customOutFileNames != null && !customOutFileNames.Any(y => y.IsMatch(fInfoFileName)))
 						return;
 
 					prevFile = fInfo;
@@ -343,7 +353,7 @@ namespace Force.Blazer.Exe
 
 			if (opt.Stdout) outFile[0] = Console.OpenStandardOutput();
 			// we haven't received an file info from callback
-			if (outFile[0] == null)
+			if (outFile[0] == null && !outBlazerStream.HaveMultipleFiles)
 				outFile[0] = new StatStream(new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
 
 			using (var inFile = outStream)
@@ -535,6 +545,34 @@ namespace Force.Blazer.Exe
 				Console.Error.WriteLine(ex.Message);
 				return null;
 			}
+		}
+
+		private static string[] ExpandFilesInList(string[] initialFiles, out bool hasMissingFiles)
+		{
+			hasMissingFiles = false;
+			var l = new List<string>();
+			// todo: better search + unit tests
+			foreach (var s in initialFiles)
+			{
+				if (File.Exists(s))
+					l.Add(s);
+				else if (Directory.Exists(s)) l.Add(s);
+				else
+				{
+					var asteriskIdx = s.IndexOf("*", StringComparison.InvariantCulture);
+					if (asteriskIdx < 0) hasMissingFiles = true;
+					else
+					{
+						var slashIdx = s.LastIndexOfAny(
+							new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, asteriskIdx - 1, asteriskIdx - 1);
+						var dirToSearch = string.Empty;
+						if (slashIdx >= 0) dirToSearch = s.Substring(0, slashIdx);
+						l.AddRange(Directory.GetFiles(dirToSearch, s.Remove(0, slashIdx + 1), SearchOption.AllDirectories));
+					}
+				}
+			}
+
+			return l.ToArray();
 		}
 	}
 }

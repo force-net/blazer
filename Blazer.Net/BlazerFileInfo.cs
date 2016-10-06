@@ -68,11 +68,18 @@ namespace Force.Blazer
 		/// </summary>
 		public void ApplyToFile()
 		{
-			if (!File.Exists(FileName) && !Directory.Exists(FileName))
-				return;
-			File.SetAttributes(FileName, Attributes);
-			File.SetCreationTimeUtc(FileName, CreationTimeUtc);
-			File.SetLastWriteTimeUtc(FileName, CreationTimeUtc);
+			if (File.Exists(FileName))
+			{
+				File.SetAttributes(FileName, Attributes);
+				File.SetCreationTimeUtc(FileName, CreationTimeUtc);
+				File.SetLastWriteTimeUtc(FileName, LastWriteTimeUtc);
+			}
+			else if (Directory.Exists(FileName))
+			{
+				new DirectoryInfo(FileName).Attributes = Attributes;
+				Directory.SetCreationTimeUtc(FileName, CreationTimeUtc);
+				Directory.SetLastWriteTimeUtc(FileName, LastWriteTimeUtc);
+			}
 		}
 	}
 }
