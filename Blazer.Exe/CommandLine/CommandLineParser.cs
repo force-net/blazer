@@ -14,6 +14,8 @@ namespace Force.Blazer.Exe.CommandLine
 
 		private List<string> _nonKeyOptions;
 
+		private bool _hasAnyOptions;
+
 		public CommandLineParser(string[] args)
 		{
 			ParseArgumentsInternal(args);
@@ -22,6 +24,8 @@ namespace Force.Blazer.Exe.CommandLine
 		private void ParseArgumentsInternal(string[] args)
 		{
 			var t = new T();
+
+			_hasAnyOptions = args.Length > 0;
 
 			var knownOptions =
 				typeof(T).GetProperties()
@@ -113,6 +117,8 @@ namespace Force.Blazer.Exe.CommandLine
 
 		public string GenerateHelp()
 		{
+			var headerAttribute = (CommandLineDescriptionAttribute)typeof(T).GetCustomAttributes(typeof(CommandLineDescriptionAttribute), true).FirstOrDefault();
+
 			var options = typeof(T).GetProperties()
 						.Select(x => (CommandLineOptionAttribute)x.GetCustomAttributes(typeof(CommandLineOptionAttribute), true).FirstOrDefault())
 						.Where(x => x != null)
@@ -130,6 +136,9 @@ namespace Force.Blazer.Exe.CommandLine
 			}
 
 			var b = new StringBuilder();
+
+			if (headerAttribute != null) b.Append(headerAttribute.Description).AppendLine();
+
 			foreach (var option in options)
 			{
 				b.Append("\t");
@@ -164,6 +173,11 @@ namespace Force.Blazer.Exe.CommandLine
 			var version = (AssemblyFileVersionAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true).First();
 
 			return string.Format("{0} {2} ({3})  {1}", title.Title, copy.Copyright, version.Version, additionalVersion);
+		}
+
+		public bool HasAnyOptions()
+		{
+			return _hasAnyOptions;
 		}
 	}
 }

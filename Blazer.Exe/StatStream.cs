@@ -18,13 +18,15 @@ namespace Force.Blazer.Exe
 
 		private readonly Stopwatch _sw = new Stopwatch();
 
+		public string Prefix { get; set; }
+
 		public StatStream(Stream baseStream, bool doStats = false)
 		{
 			_baseStream = baseStream;
 			_doStats = doStats;
 			if (doStats)
 			{
-				_totalLength = baseStream.Length;
+				_totalLength = baseStream.CanSeek ? baseStream.Length : -1;
 				_sw.Start();
 			}
 		}
@@ -75,16 +77,17 @@ namespace Force.Blazer.Exe
 				{
 					var eta = (10000 * elapsed / pcnt) - elapsed;
 					Console.Write(
-						"\r{0,3}% ETA: {1} {2}MB/s  ",
+						"\r{3}{0,3}% ETA: {1} {2}MB/s  ",
 						pcntAdj,
 						TimeSpan.FromMilliseconds(eta).ToString(@"hh\:mm\:ss"),
-						_totalHandled / 1048 / elapsed);
+						_totalHandled / 1048 / elapsed,
+						Prefix);
 					prevPcnt = pcntAdj;
 				}
 			}
 			else
 			{
-				Console.Write("\rProcessed {0,3}MB {1}MB/s  ", _totalHandled / 1048576, _totalHandled / 1048 / elapsed);
+				Console.Write("\r{2}Processed {0,3}MB {1}MB/s  ", _totalHandled / 1048576, _totalHandled / 1048 / elapsed, Prefix);
 			}
 		}
 

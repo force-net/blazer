@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Force")]
 [assembly: AssemblyProduct("Blazer Archiver")]
-[assembly: AssemblyCopyright("Copyright © Force 2016")]
+[assembly: AssemblyCopyright("Copyright © Force 2016-2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

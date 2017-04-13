@@ -1,5 +1,6 @@
 ﻿namespace Force.Blazer.Exe.CommandLine
 {
+	[CommandLineDescription("Usage: Blazer.exe [options] [archiveName.blz] sourceFile|@fileList")]
 	public class BlazerCommandLineOptions
 	{
 		[CommandLineOption('h', "help", "Display this help")]

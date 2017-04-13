@@ -53,8 +53,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandLine\BlazerCommandLineOptions.cs" />
+    <Compile Include="CommandLine\CommandLineDescriptionAttribute.cs" />
     <Compile Include="CommandLine\CommandLineParser.cs" />
     <Compile Include="CommandLine\CommandLineOptionAttribute.cs" />
+    <Compile Include="FileNameHelper.cs" />
     <Compile Include="NullStream.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
