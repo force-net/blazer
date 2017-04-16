@@ -59,6 +59,11 @@ namespace Force.Blazer
 		public Action<BlazerFileInfo> FileInfoCallback { get; set; }
 
 		/// <summary>
+		/// Skip <see cref="FileInfoCallback"/> when archive contains only one file (can be useful, when file name is analyzed manually)
+		/// </summary>
+		public bool DoNotFireInfoCallbackOnOneFile { get; set; }
+
+		/// <summary>
 		/// Create default options
 		/// </summary>
 		public static BlazerDecompressionOptions CreateDefault()

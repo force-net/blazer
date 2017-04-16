@@ -206,6 +206,8 @@ namespace Force.Blazer
 
 		private Action<BlazerFileInfo> _fileInfoCallback { get; set; }
 
+		private bool _doNotFireInfoCallbackOnOneFile { get; set; }
+
 		/// <summary>
 		/// Constructs Blazer decompression stream
 		/// </summary>
@@ -220,6 +222,7 @@ namespace Force.Blazer
 			var password = options.Password;
 			_controlDataCallback = options.ControlDataCallback ?? ((b, o, c) => { });
 			_fileInfoCallback = options.FileInfoCallback ?? (f => { });
+			_doNotFireInfoCallbackOnOneFile = options.DoNotFireInfoCallbackOnOneFile;
 			_noSeek = options.NoSeek;
 
 			if (options.EncyptFull)
@@ -312,6 +315,7 @@ namespace Force.Blazer
 					throw new InvalidOperationException("Invalid file info header");
 
 				_fileInfo = FileHeaderHelper.ParseFileHeader(fInfo.Buffer, fInfo.Offset, fInfo.Count);
+				if (!_haveMultipleFiles && !_doNotFireInfoCallbackOnOneFile)
 				_fileInfoCallback(_fileInfo);
 			}
 		}

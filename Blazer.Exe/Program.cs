@@ -40,6 +40,9 @@ namespace Force.Blazer.Exe
 				return 0;
 			}
 
+#if DEBUG
+			return Process(options);
+#else
 			try
 			{
 				return Process(options);
@@ -49,6 +52,7 @@ namespace Force.Blazer.Exe
 				Console.Error.WriteLine(ex.Message);
 				return 1;
 			}
+#endif
 		}
 
 		private static int Process(CommandLineParser<BlazerCommandLineOptions> options)
@@ -149,6 +153,11 @@ namespace Force.Blazer.Exe
 					BlazerFlags flagsBlockSize;
 					if (Enum.TryParse("InBlockSize" + opt.MaxBlockSize, true, out flagsBlockSize))
 						compressionOptions.SetMaxBlockSizeFromFlags(flagsBlockSize);
+					else
+					{
+						Console.Error.WriteLine("Unsupported value for max block size");
+						return 1;
+					}
 				}
 			}
 
@@ -216,7 +225,7 @@ namespace Force.Blazer.Exe
 
 			Regex[] customOutFileNames = fileOptions.SourceFiles
 					.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim())
-					.Select(x => new Regex(new string(x.SelectMany(y => char.IsLetterOrDigit(y) ? new[] { y } : (y == '*' ? new[] { '.', '*' } : new[] { '\\', y })).ToArray())))
+					.Select(x => new Regex(new string(x.SelectMany(y => char.IsLetterOrDigit(y) || y == '_' ? new[] { y } : (y == '*' ? new[] { '.', '*' } : new[] { '\\', y })).ToArray())))
 					.ToArray();
 
 			if (customOutFileNames.Length == 0)
@@ -224,7 +233,7 @@ namespace Force.Blazer.Exe
 
 			Stream inStreamSource = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(fileOptions.ArchiveName);
 
-			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
+			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull, DoNotFireInfoCallbackOnOneFile = true };
 
 			BlazerOutputStream outBlazerStream = null;
 			Stream outStream;
@@ -232,6 +241,8 @@ namespace Force.Blazer.Exe
 			Stream[] outFile = { null };
 			bool forceAllOverride = false;
 			bool forceAllSkip = opt.Stdin && !opt.Force; // nothing to do, just skip
+			bool hasMultipleFiles = false;
+			bool doExit = false;
 			decOptions.FileInfoCallback = fInfo =>
 				{
 					if (opt.Stdout)
@@ -269,13 +280,28 @@ namespace Force.Blazer.Exe
 								return;
 							if (!opt.Force && !forceAllOverride)
 							{
-								Console.WriteLine("Target " + fInfoFileName + " already exists. Overwrite? (Y)es (N)o (A)ll (S)kip all existing");
+// ReSharper disable AccessToModifiedClosure
+								Console.WriteLine("Target " + fInfoFileName + " already exists. Overwrite? (Y)es (N)o" + (hasMultipleFiles ? " (A)ll (S)kip all existing" : string.Empty));
+// ReSharper restore AccessToModifiedClosure
 								var readLine = Console.ReadLine().Trim().ToLowerInvariant();
 
 								forceAllOverride = readLine.IndexOf("a", StringComparison.Ordinal) >= 0;
 								forceAllSkip = readLine.IndexOf("s", StringComparison.Ordinal) >= 0;
 								if (!forceAllOverride && readLine.IndexOf("y", StringComparison.Ordinal) < 0)
+								{
+// ReSharper disable AccessToModifiedClosure
+									if (!hasMultipleFiles)
+									{
+										doExit = true;
+										return;
+									}
+// ReSharper restore AccessToModifiedClosure
+
+									var sts = outFile[0] as StatStream;
+									if (sts != null)
+										sts.Prefix = "Skipping " + fInfo.FileName + "  ";
 									return;
+								}
 							}
 
 							new FileStream(fInfoFileName, FileMode.Truncate, FileAccess.Write).Close();
@@ -312,8 +338,14 @@ namespace Force.Blazer.Exe
 				outStream = outBlazerStream;
 			}
 
+			if (opt.NoFileName && outBlazerStream.HaveMultipleFiles)
+			{
+				Console.Error.WriteLine("Cannot decompress without filename when archive contains multiple files");
+				return 1;
+			}
+
 			var fileName = Path.GetFileName(fileOptions.ArchiveName ?? "dummy");
-			if (fileName.EndsWith(".blz")) fileName = fileName.Substring(0, fileName.Length - 5);
+			if (fileName.EndsWith(".blz")) fileName = fileName.Substring(0, fileName.Length - 4);
 			else fileName += (fileName.EndsWith(".") ? string.Empty : ".") + "unpacked";
 
 			if (outBlazerStream != null && outBlazerStream.FileInfo != null && !opt.NoFileName)
@@ -325,10 +357,14 @@ namespace Force.Blazer.Exe
 			if (!outBlazerStream.HaveMultipleFiles && !customOutFileNames.Any(y => y.IsMatch(fileName)))
 				return 0;
 
+			hasMultipleFiles = outBlazerStream.HaveMultipleFiles;
+
 			if (opt.Stdout) outFile[0] = Console.OpenStandardOutput();
+			if (!hasMultipleFiles)
+				decOptions.FileInfoCallback(new BlazerFileInfo { FileName = fileName, CreationTimeUtc = DateTime.UtcNow, LastWriteTimeUtc = DateTime.UtcNow });
 			// we haven't received an file info from callback
-			if (outFile[0] == null && !outBlazerStream.HaveMultipleFiles)
-				outFile[0] = new StatStream(new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
+			// if (outFile[0] == null && !outBlazerStream.HaveMultipleFiles)
+			//	outFile[0] = new StatStream(new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
 
 			using (var inFile = outStream)
 			{
@@ -336,13 +372,15 @@ namespace Force.Blazer.Exe
 				int cnt = 1;
 				while (cnt > 0)
 				{
+					if (doExit)
+						break;
 					cnt = inFile.Read(buf, 0, buf.Length);
 					if (outFile[0] != null)
 						outFile[0].Write(buf, 0, cnt);
 				}
 			}
 
-			if (prevFile != null)
+			if (prevFile != null && outFile[0] != null)
 			{
 				outFile[0].Flush();
 				outFile[0].Close();
@@ -464,7 +502,7 @@ namespace Force.Blazer.Exe
 				if (fi == null && !outStream.HaveMultipleFiles)
 				{
 					var fileName = Path.GetFileName(fileOptions.ArchiveName ?? "dummy");
-					if (fileName.EndsWith(".blz")) fileName = fileName.Substring(0, fileName.Length - 5);
+					if (fileName.EndsWith(".blz")) fileName = fileName.Substring(0, fileName.Length - 4);
 					else fileName += (fileName.EndsWith(".") ? string.Empty : ".") + "unpacked";
 
 					decOptions.FileInfoCallback(new BlazerFileInfo
