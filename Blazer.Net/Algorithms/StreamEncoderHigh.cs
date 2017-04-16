@@ -70,10 +70,10 @@ namespace Force.Blazer.Algorithms
 		protected override void ShiftHashtable()
 		{
 			for (var i = 0; i < HASHARR_CNT; i++)
-				for (var k = 0; k < HASH_TABLE_LEN; k++)
-					_hashArr2[i][k] = Math.Min(0, _hashArr2[i][k] - SIZE_SHIFT);
+				for (var k = 0; k < HASH_TABLE_LEN + 1; k++)
+					_hashArr2[i][k] = Math.Max(0, _hashArr2[i][k] - SIZE_SHIFT);
 
-			for (var k = 0; k < HASH_TABLE_LEN; k++) _hashArrPos[k] = _hashArrPos[k] & 0xffff;
+			for (var k = 0; k < HASH_TABLE_LEN + 1; k++) _hashArrPos[k] = _hashArrPos[k] & 0xffff;
 		}
 
 		/// <summary>

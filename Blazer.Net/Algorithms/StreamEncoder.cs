@@ -115,6 +115,7 @@ namespace Force.Blazer.Algorithms
 			if (_shiftValue >= 2 * SIZE_SHIFT)
 			{
 				ShiftHashtable();
+				_shiftValue -= SIZE_SHIFT;
 			}
 
 			return new BufferInfo(_bufferOut, _bufferOutIdx, cnt);
@@ -401,9 +402,8 @@ namespace Force.Blazer.Algorithms
 		/// <remarks>Use this method to periodically shift positions in array. It is required for streams longer than 2Gb</remarks>
 		protected virtual void ShiftHashtable()
 		{
-			_shiftValue -= SIZE_SHIFT;
-			for (var i = 0; i < HASH_TABLE_LEN; i++)
-				_hashArr[i] = Math.Min(0, _hashArr[i] - SIZE_SHIFT);
+			for (var i = 0; i < HASH_TABLE_LEN + 1; i++)
+				_hashArr[i] = Math.Max(0, _hashArr[i] - SIZE_SHIFT);
 		}
 
 		/// <summary>
