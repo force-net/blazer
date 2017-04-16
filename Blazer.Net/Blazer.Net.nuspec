@@ -3,7 +3,7 @@
   <metadata>
     <id>Blazer.Net</id>
     <title>Blazer.Net</title>
-    <version>0.9.2</version>
+    <version>0.9.3</version>
     <authors>force</authors>
     <owners>force</owners>
     <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
@@ -20,12 +20,10 @@
 	See project site for detailed information.
     </description>
     <releaseNotes>
-    StreamHigh optimized and its compression rate slightly improved.
-    Added MaxBlockSize option from flags.
-    Added support for multiple files in one archive.
+    Fixed compression for files greater 1Gb in stream and streamhigh mode
     </releaseNotes>
-    <copyright>Copyright by Force 2016</copyright>
-    <tags>.NET fast compression archive crc32c</tags>
+    <copyright>Copyright by Force 2016-2017</copyright>
+    <tags>.NET fast compression archive crc32c archiver</tags>
   </metadata>
   <files><file src="bin\Release\Blazer.Net.*" target="lib\net40" /></files>
 </package>
