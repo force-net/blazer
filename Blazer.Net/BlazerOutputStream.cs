@@ -115,6 +115,7 @@ namespace Force.Blazer
 		private IDecoder _decoder;
 
 		private bool _includeCrc;
+
 		private bool _includeFooter;
 
 		private int _maxUncompressedBlockSize;
@@ -345,6 +346,7 @@ namespace Force.Blazer
 		/// <param name="count">The maximum number of bytes to be read from the current stream. </param>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
+			start:
 			if (_decodedBufferOffset == _decodedBufferLength)
 			{
 				if (_isFinished) return 0;
@@ -354,7 +356,7 @@ namespace Force.Blazer
 					if (_encodingType == (byte)BlazerBlockType.ControlDataEmpty)
 					{
 						_controlDataCallback(new byte[0], 0, 0);
-						return Read(buffer, offset, count);
+						goto start;
 					}
 
 					_isFinished = true;
@@ -366,14 +368,14 @@ namespace Force.Blazer
 					if (_encodingType == (byte)BlazerBlockType.ControlData)
 					{
 						_controlDataCallback(info.Buffer, info.Offset, info.Count);
-						return Read(buffer, offset, count);
+						goto start;
 					}
 					else if (_encodingType == (byte)BlazerBlockType.FileInfo)
 					{
 						// current file info
 						_fileInfo = FileHeaderHelper.ParseFileHeader(info.Buffer, info.Offset, info.Count);
 						_fileInfoCallback(_fileInfo);
-						return Read(buffer, offset, count);
+						goto start;
 					}
 					else
 						throw new InvalidOperationException("Invalid header");
@@ -464,10 +466,19 @@ namespace Force.Blazer
 
 		private uint _passedCrc;
 
+		private bool _footerIsValidated;
+
 		private int GetNextChunkHeader()
 		{
 			// end of stream
-			if (!EnsureRead(_sizeBlock, 0, 4)) return 0;
+			if (!EnsureRead(_sizeBlock, 0, 4))
+			{
+				_encodingType = 0;
+				// missing footer
+				if (_includeFooter && !_footerIsValidated)
+					throw new InvalidOperationException("Stream was finished, but footer is missing. It seems, stream is incomplete");
+				return 0;
+			}
 
 			_encodingType = _sizeBlock[0];
 
@@ -475,6 +486,7 @@ namespace Force.Blazer
 			if (_encodingType == (byte)BlazerBlockType.Footer)
 			{
 				ValidateFooter(_sizeBlock);
+				_footerIsValidated = true;
 				return 0;
 			}
 

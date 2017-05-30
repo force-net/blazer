@@ -111,7 +111,7 @@ namespace Force.Blazer
 		private readonly bool _includeCrc;
 		private readonly bool _includeHeader;
 		private readonly bool _includeFooter;
-		private readonly bool _respectFlush;
+		private readonly BlazerFlushMode _flushMode;
 
 		private readonly int _outBufferHeaderSize;
 
@@ -165,7 +165,7 @@ namespace Force.Blazer
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeHeader = (flags & BlazerFlags.IncludeHeader) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
-			_respectFlush = (flags & BlazerFlags.RespectFlush) != 0;
+			_flushMode = options.FlushMode;
 
 			_maxInBlockSize = 1 << ((((int)flags) & 15) + 9);
 			_innerBuffer = new byte[_maxInBlockSize];
@@ -228,11 +228,6 @@ namespace Force.Blazer
 		protected override void Dispose(bool disposing)
 		{
 			ProcessAndWrite();
-			// zero-length file
-			if (_header != null)
-			{
-				WriteHeader();
-			}
 
 			if (_includeFooter)
 				_innerStream.Write(new[] { (byte)BlazerBlockType.Footer, (byte)'Z', (byte)'l', (byte)'B' }, 0, 4);
@@ -300,6 +295,11 @@ namespace Force.Blazer
 					ProcessAndWrite();
 				}
 			}
+
+			if (_flushMode == BlazerFlushMode.AutoFlush)
+				Flush();
+			else if (_flushMode == BlazerFlushMode.RespectFlush && buffer.Length < offset + count) // smart flush will flush data, if it smaller than buffer size. otherwise we use large binary data and it not required to be flushed
+				Flush();
 		}
 
 		/// <summary>
@@ -324,7 +324,7 @@ namespace Force.Blazer
 		/// </summary>
 		public override void Flush()
 		{
-			if (_respectFlush)
+			if (_flushMode != BlazerFlushMode.IgnoreFlush)
 			{
 				ProcessAndWrite();
 				_innerStream.Flush();
@@ -333,9 +333,14 @@ namespace Force.Blazer
 
 		private void ProcessAndWrite()
 		{
+			if (_header != null)
+				WriteHeader();
+
 			// nothing to write
 			if (_innerBufferPos == 0)
+			{
 				return;
+			}
 
 			var info = _encoder.Encode(_innerBuffer, 0, _innerBufferPos);
 			// should not compress
@@ -370,11 +375,6 @@ namespace Force.Blazer
 
 		private void WriteOuterBlock(byte[] bufferOut, int offset, int length, BlazerBlockType blockType)
 		{
-			if (_header != null)
-			{
-				WriteHeader();
-			}
-
 			if (length == 0) return;
 			var o = length - 1; // -1 - we always write here at least 1 byte, so there is no point to send info about this byte
 

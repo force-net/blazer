@@ -100,7 +100,7 @@ namespace Force.Blazer.Encyption
 			var cnt = 8;
 			while (cnt > 0)
 			{
-				var readed = inner.Read(salt, 0, cnt);
+				var readed = inner.Read(salt, 8 - cnt, cnt);
 				if (readed == 0 && cnt > 0)
 					throw new InvalidOperationException("Invalid input stream");
 				cnt -= readed;

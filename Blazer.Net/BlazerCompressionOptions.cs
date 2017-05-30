@@ -85,18 +85,7 @@ namespace Force.Blazer
 		/// Respect <see cref="System.IO.Stream.Flush"/> command. 
 		/// </summary>
 		/// <remarks>If it set, every flush will compress current block of data and Flush it into inner stream. Otherwise, flush commands are ignored</remarks>
-		public bool RespectFlush
-		{
-			get
-			{
-				return GetFlag(BlazerFlags.RespectFlush);
-			}
-
-			set
-			{
-				SetFlag(BlazerFlags.RespectFlush, value);
-			}
-		}
+		public BlazerFlushMode FlushMode { get; set; }
 
 		/// <summary>
 		/// Maximum block size to compress. Larger blocks require more memory, but can produce higher compression
@@ -183,7 +172,8 @@ namespace Force.Blazer
 			return new BlazerCompressionOptions
 			{
 				Encoder = EncoderDecoderFactory.GetEncoder(BlazerAlgorithm.Stream),
-				_flags = BlazerFlags.DefaultStream
+				_flags = BlazerFlags.DefaultStream,
+				FlushMode = BlazerFlushMode.RespectFlush
 			};
 		}
 
@@ -195,7 +185,8 @@ namespace Force.Blazer
 			return new BlazerCompressionOptions
 			{
 				Encoder = new StreamEncoderHigh(),
-				_flags = BlazerFlags.DefaultStream
+				_flags = BlazerFlags.DefaultStream,
+				FlushMode = BlazerFlushMode.RespectFlush
 			};
 		}
 
@@ -221,6 +212,9 @@ namespace Force.Blazer
 			{
 				flags |= EncryptFull ? BlazerFlags.EncryptOuter : BlazerFlags.EncryptInner;
 			}
+
+			if (FlushMode != BlazerFlushMode.IgnoreFlush)
+				flags |= BlazerFlags.RespectFlush;
 
 			return flags;
 		}

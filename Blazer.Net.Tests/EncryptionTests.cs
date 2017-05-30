@@ -21,7 +21,22 @@ namespace Blazer.Net.Tests
 			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
 			blazerCompressionOptions.SetEncoderByAlgorithm(algorithm);
 			blazerCompressionOptions.Password = "123";
+			blazerCompressionOptions.FlushMode = BlazerFlushMode.AutoFlush;
 			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("123")));
+		}
+
+		[Test]
+		[TestCase(BlazerAlgorithm.NoCompress)]
+		[TestCase(BlazerAlgorithm.Stream)]
+		[TestCase(BlazerAlgorithm.Block)]
+		public void Simple_Data_Should_Be_Encoded_Decoded_Small_Block(BlazerAlgorithm algorithm)
+		{
+			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.SetEncoderByAlgorithm(algorithm);
+			blazerCompressionOptions.Password = "123";
+			blazerCompressionOptions.FlushMode = BlazerFlushMode.AutoFlush;
+			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("123")), 2);
 		}
 
 		[Test]
@@ -64,6 +79,16 @@ namespace Blazer.Net.Tests
 			blazerCompressionOptions.Password = "123";
 			blazerCompressionOptions.EncryptFull = true;
 			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("123") { EncyptFull = true }));
+		}
+
+		[Test]
+		public void EncyptFull_Should_Work_Small_Buffer()
+		{
+			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.Password = "123";
+			blazerCompressionOptions.EncryptFull = true;
+			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("123") { EncyptFull = true }), 2);
 		}
 
 		[Test]

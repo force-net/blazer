@@ -10,30 +10,30 @@ namespace Blazer.Net.Tests
 {
 	public static class IntegrityHelper
 	{
-		public static void CheckCompressDecompress(byte[] inData, BlazerCompressionOptions options, Func<Stream, Stream> decoderCreator = null)
+		public static void CheckCompressDecompress(byte[] inData, BlazerCompressionOptions options, Func<Stream, Stream> decoderCreator = null, int bufferSize = 81920)
 		{
-			var compressed = CompressData(inData, options);
-			var decompressed = DecompressData(compressed, decoderCreator);
+			var compressed = CompressData(inData, options, bufferSize);
+			var decompressed = DecompressData(compressed, decoderCreator, bufferSize);
 			
 			CollectionAssert.AreEqual(inData, decompressed);
 		}
 
-		public static byte[] CompressData(byte[] inData, BlazerCompressionOptions options)
+		public static byte[] CompressData(byte[] inData, BlazerCompressionOptions options, int bufferSize = 81920)
 		{
 			var ms1 = new MemoryStream();
 			var input = new BlazerInputStream(ms1, options);
 
-			new MemoryStream(inData).CopyTo(input);
+			new MemoryStream(inData).CopyTo(input, bufferSize);
 			input.Close();
 			return ms1.ToArray();
 		}
 
-		public static byte[] DecompressData(byte[] inData, Func<Stream, Stream> decoderCreator = null)
+		public static byte[] DecompressData(byte[] inData, Func<Stream, Stream> decoderCreator = null, int bufferSize = 81920)
 		{
 			var ms3 = new MemoryStream(inData);
 			var output = decoderCreator != null ? decoderCreator(ms3) : new BlazerOutputStream(ms3);
 			var ms2 = new MemoryStream();
-			output.CopyTo(ms2);
+			output.CopyTo(ms2, bufferSize);
 			output.Close();
 			return ms2.ToArray();
 		}

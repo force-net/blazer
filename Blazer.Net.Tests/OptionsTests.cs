@@ -172,7 +172,7 @@ namespace Blazer.Net.Tests
 
 			// turn off flush
 			blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
-			blazerCompressionOptions.RespectFlush = false;
+			blazerCompressionOptions.FlushMode = BlazerFlushMode.IgnoreFlush;
 			ms1 = new MemoryStream();
 			// default flush respected
 			using (var b = new BlazerInputStream(ms1, blazerCompressionOptions))
@@ -216,6 +216,19 @@ namespace Blazer.Net.Tests
 			Assert.Throws<InvalidOperationException>(() => new BlazerOutputStream(new MemoryStream(arr)));
 
 			Assert.DoesNotThrow(() => new BlazerOutputStream(new MemoryStream(arr), new BlazerDecompressionOptions() { NoSeek = true }));
+		}
+
+		[Test]
+		public void Header_Should_Be_Flushed()
+		{
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			var ms1 = new MemoryStream();
+			// default flush respected
+			using (var b = new BlazerInputStream(ms1, blazerCompressionOptions))
+			{
+				b.Flush();
+				Assert.That(ms1.Length, Is.GreaterThan(0));
+			}
 		}
 	}
 }

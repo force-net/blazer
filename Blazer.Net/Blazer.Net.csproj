@@ -63,6 +63,7 @@
     <Compile Include="BlazerBlockType.cs" />
     <Compile Include="BlazerDecompressionOptions.cs" />
     <Compile Include="Algorithms\BufferInfo.cs" />
+    <Compile Include="BlazerFlushMode.cs" />
     <Compile Include="BlazerPatternedHelper.cs" />
     <Compile Include="Helpers\FileHeaderHelper.cs" />
     <Compile Include="Algorithms\StreamEncoderHigh.cs" />

@@ -46,8 +46,8 @@ namespace Force.Blazer.Algorithms
 				_innerBufferLen = DecompressBlock(buffer, offset, length, _innerBuffer, _innerBufferLen, _innerBufferMaxLen);
 			else
 			{
-				Buffer.BlockCopy(buffer, 0, _innerBuffer, _innerBufferLen, length);
-				_innerBufferLen += length;
+				Buffer.BlockCopy(buffer, offset, _innerBuffer, _innerBufferLen, length - offset);
+				_innerBufferLen += length - offset;
 			}
 
 			return new BufferInfo(_innerBuffer, outOffset, _innerBufferLen);

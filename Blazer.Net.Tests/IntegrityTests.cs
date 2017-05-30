@@ -65,9 +65,9 @@ namespace Blazer.Net.Tests
 			compressed[3]--;
 
 			// invalid flags
-			compressed[6]++;
+			compressed[6] = 0xff;
 			Assert.That(Assert.Throws<InvalidOperationException>(() => IntegrityHelper.DecompressData(compressed)).Message, Is.EqualTo("Invalid flag combination. Try to use newer version of Blazer"));
-			compressed[6]--;
+			// compressed[6]--;
 		}
 
 		[Test]
@@ -122,7 +122,7 @@ namespace Blazer.Net.Tests
 			data[0] = (byte)blockSize;
 			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
 			blazerCompressionOptions.SetEncoderByAlgorithm(algorithm);
-			blazerCompressionOptions.RespectFlush = true;
+			blazerCompressionOptions.FlushMode = BlazerFlushMode.RespectFlush;
 
 			var memoryStream = new MemoryStream();
 			const int Count = 10;
@@ -165,6 +165,49 @@ namespace Blazer.Net.Tests
 			var compressed = memoryStream.ToArray();
 			var decompressed = IntegrityHelper.DecompressData(compressed);
 			Assert.That(decompressed.Length, Is.EqualTo(0));
+		}
+
+		[Test]
+		public void FailData_Should_Not_Cause_StackOverflow()
+		{
+			var ss = new MemoryStream();
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.IncludeFooter = false;
+			var os = new BlazerInputStream(ss, blazerCompressionOptions);
+			os.WriteControlData(new byte[0], 0, 0);
+			
+			new BlazerOutputStream(new MemoryStream(ss.ToArray()), new BlazerDecompressionOptions { NoSeek = true }).Read(new byte[100], 0, 100);
+		}
+
+		[Test]
+		public void MissingFooter_With_No_Seec_Should_Cause_Error()
+		{
+			var ss = new MemoryStream();
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			var os = new BlazerInputStream(ss, blazerCompressionOptions);
+			os.WriteControlData(new byte[0], 0, 0);
+
+			var ex = Assert.Throws<InvalidOperationException>(() => new BlazerOutputStream(new MemoryStream(ss.ToArray()), new BlazerDecompressionOptions { NoSeek = true }).Read(new byte[100], 0, 100));
+			Assert.That(ex.Message, Is.EqualTo("Stream was finished, but footer is missing. It seems, stream is incomplete"));
+		}
+
+		[Test]
+		public void After_Footer_Read_Should_Be_Zero()
+		{
+			var ss = new MemoryStream();
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.LeaveStreamOpen = true;
+			var os = new BlazerInputStream(ss, blazerCompressionOptions);
+			os.Write(new byte[100], 0, 100);
+			os.Close();
+			ss.Write(new byte[] { 1, 2, 3, 4 }, 0, 4);
+			ss.Close();
+
+			var oos = new BlazerOutputStream(new MemoryStream(ss.ToArray()), new BlazerDecompressionOptions { NoSeek = true });
+			var read = oos.Read(new byte[100], 0, 100);
+			Assert.That(read, Is.EqualTo(100));
+			Assert.That(oos.Read(new byte[100], 0, 100), Is.EqualTo(0));
+			Assert.That(oos.Read(new byte[100], 0, 100), Is.EqualTo(0));
 		}
 	}
 }
