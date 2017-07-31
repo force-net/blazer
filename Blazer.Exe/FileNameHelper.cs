@@ -153,9 +153,9 @@ namespace Force.Blazer.Exe
 					if (asteriskIdx < 0) hasMissingFiles = true;
 					else
 					{
-						var slashIdx = s.LastIndexOfAny(
-							new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, asteriskIdx - 1, asteriskIdx - 1);
-						var dirToSearch = string.Empty;
+						var slashIdx = asteriskIdx > 0 ? s.LastIndexOfAny(
+							new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, asteriskIdx - 1, asteriskIdx - 1) : -1;
+						var dirToSearch = ".";
 						if (slashIdx >= 0) dirToSearch = s.Substring(0, slashIdx);
 						l.AddRange(Directory.GetFiles(dirToSearch, s.Remove(0, slashIdx + 1), SearchOption.AllDirectories));
 					}

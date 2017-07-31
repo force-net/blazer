@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Security.Cryptography;
 
@@ -19,6 +20,7 @@ namespace Force.Blazer.Encyption
 		}
 	}
 
+	[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:FileMayOnlyContainASingleClass", Justification = "Reviewed. Suppression is OK here.")]
 	internal class EncryptHelper : NullEncryptHelper
 	{
 		private const int PrefixSize = 8;
@@ -136,7 +138,7 @@ namespace Force.Blazer.Encyption
 			// zero. it is ok - we use random password (due salt), so, anyway it will be different
 			aes.IV = new byte[16];
 			aes.Mode = CipherMode.CBC;
-			aes.Padding = PaddingMode.ISO10126; // here we will use such padding
+			aes.Padding = PaddingMode.PKCS7; // here we will use such padding
 			inner.Write(salt, 0, 8);
 			return new CryptoStream(inner, aes.CreateEncryptor(), CryptoStreamMode.Write);
 		}

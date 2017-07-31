@@ -13,3 +13,5 @@ ipch
 Win32
 *.sdf
 *.opensdf
+
+.idea

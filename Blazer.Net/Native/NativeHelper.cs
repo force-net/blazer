@@ -41,11 +41,20 @@ namespace Force.Blazer.Native
 		private static void InitInternal()
 		{
 			var architectureSuffix = IntPtr.Size == 8 ? "x64" : "x86";
-			var assembly = Assembly.GetExecutingAssembly();
+#if NETCORE
+			var assembly = typeof(NativeHelper).GetTypeInfo().Assembly;
+#else
+			var assembly = typeof(NativeHelper).Assembly;
+#endif
 			using (var stream =
 					assembly.GetManifestResourceStream("Force.Blazer.Resources.Blazer.Native." + architectureSuffix + ".dll"))
 			{
+#if NETCORE
+				var assemblyName = assembly.GetName();
+#else
 				var assemblyName = assembly.GetName(false);
+#endif				
+				
 				var dllPath = Path.Combine(Path.GetTempPath(), assemblyName.Name + "." + NativeSuffix, architectureSuffix);
 				var fileName = Path.Combine(dllPath, "Blazer.Native.dll");
 				if (!File.Exists(fileName))

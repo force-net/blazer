@@ -9,6 +9,14 @@ namespace Blazer.Net.Tests
 	[TestFixture]
 	public class StreamEncoderTests
 	{
+		[OneTimeSetUp]
+		public void OneTimeSetUp()
+		{
+#if NETCORE
+			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+#endif
+		}
+
 		[Test]
 		public void Test_AAAAAAAA()
 		{

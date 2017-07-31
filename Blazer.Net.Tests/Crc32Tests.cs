@@ -2,8 +2,7 @@
 using System.Linq;
 using System.Text;
 
-using Crc32C;
-
+using Force.Crc32;
 using NUnit.Framework;
 
 using E = Force.Blazer.Algorithms.Crc32C.Crc32C;

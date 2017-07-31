@@ -3,7 +3,7 @@
   <metadata>
     <id>Blazer.Net</id>
     <title>Blazer.Net</title>
-    <version>0.9.4</version>
+    <version>0.10.0-beta1</version>
     <authors>force</authors>
     <owners>force</owners>
     <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
@@ -20,17 +20,15 @@
 	See project site for detailed information.
     </description>
     <releaseNotes>
-    Lot of small fixes and some improvements:
-    	- improved variants for flush mode
-    	- fixed flushing only header
-    	- fixed encryption with flush
-    	- improved integrity for incompleted streams
-    	- fixed stackoverflow with last empty control block and missing footer
-    	- fixed possible stackoverflow for rare situations
-    	- fixed possible error in decrypt with EncryptFull mode
+    	- Added support to .NET Core
+    	- Changed padding mode to full encryption (due lack of padding support for .NET Core)
     </releaseNotes>
     <copyright>Copyright by Force 2016-2017</copyright>
     <tags>.NET fast compression archive crc32c archiver</tags>
   </metadata>
-  <files><file src="bin\Release\Blazer.Net.*" target="lib\net40" /></files>
+  <files>
+  	<file src="bin\Release\Blazer.Net.*" target="lib\net40" />
+  	<file src="bin\BuildCore\netstandard1.3\Blazer.Net.dll" target="lib\netstandard1.3" />
+	<file src="bin\BuildCore\netstandard1.3\Blazer.Net.xml" target="lib\netstandard1.3" />
+	</files>
 </package>
