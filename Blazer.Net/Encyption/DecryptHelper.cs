@@ -114,8 +114,15 @@ namespace Force.Blazer.Encyption
 			// zero. it is ok - we use random password (due salt), so, anyway it will be different
 			aes.IV = new byte[16];
 			aes.Mode = CipherMode.CBC;
+			var cryptoTransform = aes.CreateDecryptor();
+#if NETCORE
 			aes.Padding = PaddingMode.PKCS7; // here we will use such padding
-			return new CryptoStream(inner, aes.CreateDecryptor(), CryptoStreamMode.Read);
+			cryptoTransform = new Iso10126TransformEmulator(cryptoTransform);
+#else
+			aes.Padding = PaddingMode.ISO10126; // here we will use such padding
+#endif
+			aes.Padding = PaddingMode.PKCS7; // here we will use such padding
+			return new CryptoStream(inner, cryptoTransform, CryptoStreamMode.Read);
 		}
 	}
 }
