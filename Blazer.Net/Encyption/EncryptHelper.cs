@@ -2,7 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Security.Cryptography;
-using System.Threading;
+using System.Text;
 
 using Force.Blazer.Algorithms;
 
@@ -34,11 +34,11 @@ namespace Force.Blazer.Encyption
 
 		private readonly RandomNumberGenerator _rng;
 
-		private readonly Random _random;
+		// private readonly Random _random;
 
 		private readonly byte[] _buffer;
 
-		private readonly byte[] _randomBlock8;
+		// private readonly byte[] _randomBlock8;
 
 		private readonly byte[] _randomBlock16;
 
@@ -48,9 +48,14 @@ namespace Force.Blazer.Encyption
 		}
 
 		public EncryptHelper(string password, int maxBufferSize)
+			: this(string.IsNullOrEmpty(password) ? null : Encoding.UTF8.GetBytes(password), maxBufferSize)
+		{
+		}
+
+		public EncryptHelper(byte[] password, int maxBufferSize)
 		{
 			_buffer = new byte[AdjustLength(maxBufferSize)]; // additional 8 bytes for adding random data to every block and whole block is multiple by 16
-			_randomBlock8 = new byte[PrefixSize];
+			// _randomBlock8 = new byte[PrefixSize];
 			_randomBlock16 = new byte[16];
 
 			// we write to header 8 byte of salt + 8 byte of random data
@@ -59,7 +64,7 @@ namespace Force.Blazer.Encyption
 			// this is fine for fast checking "is password correct", but does not
 			// give full information about is it the required password
 			_rng = RandomNumberGenerator.Create();
-			_random = new Random();
+			// _random = new Random();
 			var salt = new byte[8];
 			_rng.GetBytes(salt);
 			var pass = new Rfc2898DeriveBytes(password, salt, PbkIterations);
@@ -144,7 +149,7 @@ namespace Force.Blazer.Encyption
 			return res;
 		}
 
-		public static Stream ConvertStreamToEncyptionStream(Stream inner, string password)
+		public static Stream ConvertStreamToEncyptionStream(Stream inner, byte[] password)
 		{
 			var rng = RandomNumberGenerator.Create();
 			var salt = new byte[8];

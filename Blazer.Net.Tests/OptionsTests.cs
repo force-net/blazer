@@ -197,6 +197,27 @@ namespace Blazer.Net.Tests
 		}
 
 		[Test]
+		public void CommentRaw_Should_Be_Stored()
+		{
+			var data = new byte[123];
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.CommentRaw = new byte[] { 1, 2, 3 };
+			// with footer
+			var compressed = IntegrityHelper.CompressData(data, blazerCompressionOptions);
+			var os = new BlazerOutputStream(new MemoryStream(compressed));
+			CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, os.CommentRaw);
+		}
+
+		[Test]
+		public void CommentRaw_Should_Relate_Comment()
+		{
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.Comment = "abc";
+			Assert.That(blazerCompressionOptions.CommentRaw.Length, Is.EqualTo(3));
+			Assert.That(blazerCompressionOptions.CommentRaw[0], Is.EqualTo((int)'a'));
+		}
+
+		[Test]
 		public void NoSeek_Should_Be_Respected()
 		{
 			var data1 = new byte[12];

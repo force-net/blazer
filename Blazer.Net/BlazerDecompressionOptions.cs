@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 using Force.Blazer.Algorithms;
 
@@ -33,9 +34,25 @@ namespace Force.Blazer
 		public bool LeaveStreamOpen { get; set; }
 
 		/// <summary>
-		/// Password for decrypting data
+		/// Password for encrypting data
 		/// </summary>
-		public string Password { get; set; }
+		public string Password
+		{
+			get
+			{
+				return PasswordRaw == null ? null : Encoding.UTF8.GetString(PasswordRaw);
+			}
+
+			set
+			{
+				PasswordRaw = string.IsNullOrEmpty(value) ? null : Encoding.UTF8.GetBytes(value);
+			}
+		}
+
+		/// <summary>
+		/// Password for decrypting data (raw binary variant)
+		/// </summary>
+		public byte[] PasswordRaw { get; set; }
 
 		/// <summary>
 		/// Encrypt full flag. Fully encypted streams does not reveal any information about inner data (blazer header is also encypted)
@@ -84,6 +101,14 @@ namespace Force.Blazer
 		public BlazerDecompressionOptions(string password)
 		{
 			Password = password;
+		}
+
+		/// <summary>
+		/// Constructor for default options with raw password
+		/// </summary>
+		public BlazerDecompressionOptions(byte[] passwordRaw)
+		{
+			PasswordRaw = passwordRaw;
 		}
 	}
 }

@@ -196,7 +196,6 @@ namespace Blazer.Net.Tests
 		[Test]
 		public void Duplicate_Data_Blocks_Should_Be_Catched_on_Decryption()
 		{
-			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
 			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
 			blazerCompressionOptions.SetEncoderByAlgorithm(BlazerAlgorithm.NoCompress);
 			blazerCompressionOptions.Password = "123";
@@ -226,6 +225,30 @@ namespace Blazer.Net.Tests
 			stream2.Position = 0;
 			var os = new BlazerOutputStream(stream2, new BlazerDecompressionOptions("123"));
 			Assert.Throws<InvalidOperationException>(() => os.CopyTo(new MemoryStream()), "Invalid encrypted block. Duplicated or damaged.");
+		}
+
+		[Test]
+		public void Password_Raw_Should_Be_Processed()
+		{
+			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.SetEncoderByAlgorithm(BlazerAlgorithm.Stream);
+			blazerCompressionOptions.PasswordRaw = new byte[] { 1, 2, 3 };
+			blazerCompressionOptions.FlushMode = BlazerFlushMode.AutoFlush;
+			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions(new byte[] { 1, 2, 3 })));
+		}
+
+		[Test]
+		public void Password_Raw_Should_Be_Equal_To_Password()
+		{
+			// just bom check
+			Assert.That(Encoding.UTF8.GetBytes("я").Length, Is.EqualTo(2));
+			var data = Encoding.UTF8.GetBytes("some compressible not very long string. some some some.");
+			var blazerCompressionOptions = BlazerCompressionOptions.CreateStream();
+			blazerCompressionOptions.SetEncoderByAlgorithm(BlazerAlgorithm.Stream);
+			blazerCompressionOptions.PasswordRaw = new[] { (byte)'a', (byte)'b', (byte)'c' };
+			blazerCompressionOptions.FlushMode = BlazerFlushMode.AutoFlush;
+			IntegrityHelper.CheckCompressDecompress(data, blazerCompressionOptions, s => new BlazerOutputStream(s, new BlazerDecompressionOptions("abc")));
 		}
 	}
 }

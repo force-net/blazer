@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 using Force.Blazer.Algorithms;
 
@@ -19,7 +20,23 @@ namespace Force.Blazer
 		/// <summary>
 		/// Password for encrypting data
 		/// </summary>
-		public string Password { get; set; }
+		public string Password 
+		{ 
+			get
+			{
+				return PasswordRaw == null ? null : Encoding.UTF8.GetString(PasswordRaw);
+			} 
+
+			set
+			{
+				PasswordRaw = string.IsNullOrEmpty(value) ? null : Encoding.UTF8.GetBytes(value);
+			}
+		}
+
+		/// <summary>
+		/// Password for encrypting data (raw binary variant)
+		/// </summary>
+		public byte[] PasswordRaw { get; set; }
 
 		/// <summary>
 		/// Encrypt full flag. Fully encypted streams does not reveal any information about inner data (blazer header is also encypted)
@@ -208,7 +225,7 @@ namespace Force.Blazer
 		public BlazerFlags GetFlags()
 		{
 			var flags = _flags;
-			if (!string.IsNullOrEmpty(Password))
+			if (PasswordRaw != null && PasswordRaw.Length != 0)
 			{
 				flags |= EncryptFull ? BlazerFlags.EncryptOuter : BlazerFlags.EncryptInner;
 			}
@@ -240,7 +257,7 @@ namespace Force.Blazer
 
 		private BlazerFileInfo _fileInfo;
 
-		private string _comment;
+		private byte[] _commentRaw;
 
 		/// <summary>
 		/// Gets or sets information about encoded file
@@ -286,13 +303,29 @@ namespace Force.Blazer
 		{
 			get
 			{
-				return _comment;
+				return CommentRaw == null ? null : Encoding.UTF8.GetString(CommentRaw);
 			}
 
 			set
 			{
-				_comment = value;
-				SetFlag(BlazerFlags.IncludeComment, !string.IsNullOrEmpty(value));
+				CommentRaw = value == null ? null : Encoding.UTF8.GetBytes(value);
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets archive raw (binary) comment. Useful for adding some info for technical streams
+		/// </summary>
+		public byte[] CommentRaw
+		{
+			get
+			{
+				return _commentRaw;
+			}
+
+			set
+			{
+				_commentRaw = value;
+				SetFlag(BlazerFlags.IncludeComment, value != null && value.Length > 0);
 			}
 		}
 	}

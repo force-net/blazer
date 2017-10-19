@@ -40,5 +40,12 @@
 			Offset = offset;
 			Length = length;
 		}
+
+		public byte[] ExtractToSeparateArray()
+		{
+			var res = new byte[Length];
+			System.Buffer.BlockCopy(Buffer, Offset, res, 0, Count);
+			return res;
+		}
 	}
 }

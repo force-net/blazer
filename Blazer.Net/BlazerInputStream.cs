@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 
 using Force.Blazer.Algorithms;
 using Force.Blazer.Algorithms.Crc32C;
@@ -155,9 +154,9 @@ namespace Force.Blazer
 			var encyptOuter = (flags & BlazerFlags.EncryptOuter) != 0;
 			if (encyptOuter)
 			{
-				if (string.IsNullOrEmpty(options.Password))
+				if (options.PasswordRaw == null || options.PasswordRaw.Length == 0)
 					throw new InvalidOperationException("Encryption flag was set, but password is missing.");
-				_innerStream = EncryptHelper.ConvertStreamToEncyptionStream(innerStream, options.Password);
+				_innerStream = EncryptHelper.ConvertStreamToEncyptionStream(innerStream, options.PasswordRaw);
 			}
 
 			_leaveStreamOpen = options.LeaveStreamOpen;
@@ -175,10 +174,10 @@ namespace Force.Blazer
 			if (_encoderAlgorithmId > 15)
 				throw new InvalidOperationException("Invalid encoder algorithm");
 
-			if (!string.IsNullOrEmpty(options.Password) && !encyptOuter)
+			if (options.PasswordRaw != null && options.PasswordRaw.Length > 0 && !encyptOuter)
 			{
 				flags |= BlazerFlags.EncryptInner;
-				_encryptHelper = new EncryptHelper(options.Password, _maxInBlockSize);
+				_encryptHelper = new EncryptHelper(options.PasswordRaw, _maxInBlockSize);
 			}
 			else
 			{
@@ -210,9 +209,9 @@ namespace Force.Blazer
 
 			_isMultipleFiles = (flags & BlazerFlags.MultipleFiles) != 0;
 
-			if (!string.IsNullOrEmpty(options.Comment))
+			if (options.CommentRaw != null && options.CommentRaw.Length > 0)
 			{
-				_commentHeader = Encoding.UTF8.GetBytes(options.Comment);
+				_commentHeader = options.CommentRaw;
 				if (_commentHeader.Length > 16 * 1048576)
 					throw new InvalidOperationException("Invalid archive comment");
 			}

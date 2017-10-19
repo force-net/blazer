@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Threading;
+using System.Text;
 
 using Force.Blazer.Algorithms;
 
@@ -38,13 +38,18 @@ namespace Force.Blazer.Encyption
 
 		private Aes _aes;
 
-		private string _password;
+		private byte[] _passwordRaw;
 
 		private byte[] _buffer;
 
 		public DecryptHelper(string password)
 		{
-			_password = password;
+			_passwordRaw = string.IsNullOrEmpty(password) ? null : Encoding.UTF8.GetBytes(password);
+		}
+
+		public DecryptHelper(byte[] passwordRaw)
+		{
+			_passwordRaw = passwordRaw;
 		}
 
 		public override int GetHeaderLength()
@@ -65,8 +70,8 @@ namespace Force.Blazer.Encyption
 
 			var salt = new byte[8];
 			Buffer.BlockCopy(buffer, 0, salt, 0, 8);
-			var pass = new Rfc2898DeriveBytes(_password, salt, PbkIterations);
-			_password = null;
+			var pass = new Rfc2898DeriveBytes(_passwordRaw, salt, PbkIterations);
+			_passwordRaw = null;
 			_aes = Aes.Create();
 			_aes.Key = pass.GetBytes(32);
 			// zero. it is ok
@@ -125,7 +130,7 @@ namespace Force.Blazer.Encyption
 			return ((inLength - 1 + 8) | 15) + 1;
 		}
 
-		public static Stream ConvertStreamToDecyptionStream(Stream inner, string password)
+		public static Stream ConvertStreamToDecyptionStream(Stream inner, byte[] password)
 		{
 			var salt = new byte[8];
 			// ensure read 8 bytes

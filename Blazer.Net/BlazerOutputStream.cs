@@ -140,7 +140,7 @@ namespace Force.Blazer
 
 		private readonly bool _noSeek;
 
-		private string _comment;
+		private byte[] _commentRaw;
 
 		private NullDecryptHelper _decryptHelper;
 
@@ -197,7 +197,18 @@ namespace Force.Blazer
 		{
 			get
 			{
-				return _comment;
+				return _commentRaw == null ? null : Encoding.UTF8.GetString(_commentRaw);
+			}
+		}
+
+		/// <summary>
+		/// Archive raw comment (binary)
+		/// </summary>
+		public byte[] CommentRaw
+		{
+			get
+			{
+				return _commentRaw;
 			}
 		}
 
@@ -220,7 +231,7 @@ namespace Force.Blazer
 			if (!_innerStream.CanRead)
 				throw new InvalidOperationException("Base stream is invalid");
 
-			var password = options.Password;
+			var password = options.PasswordRaw;
 			_controlDataCallback = options.ControlDataCallback ?? ((b, o, c) => { });
 			_fileInfoCallback = options.FileInfoCallback ?? (f => { });
 			_doNotFireInfoCallbackOnOneFile = options.DoNotFireInfoCallbackOnOneFile;
@@ -228,9 +239,9 @@ namespace Force.Blazer
 
 			if (options.EncyptFull)
 			{
-				if (string.IsNullOrEmpty(options.Password))
+				if (options.Password == null || options.Password.Length == 0)
 					throw new InvalidOperationException("Encryption flag was set, but password is missing.");
-				_innerStream = DecryptHelper.ConvertStreamToDecyptionStream(innerStream, options.Password);
+				_innerStream = DecryptHelper.ConvertStreamToDecyptionStream(innerStream, options.PasswordRaw);
 				// no more password for this
 				password = null;
 			}
@@ -254,7 +265,7 @@ namespace Force.Blazer
 			}
 		}
 
-		private void InitByFlags(BlazerFlags flags, IDecoder decoder, string password)
+		private void InitByFlags(BlazerFlags flags, IDecoder decoder, byte[] password)
 		{
 			if ((flags & BlazerFlags.IncludeHeader) != 0)
 				throw new InvalidOperationException("Flags cannot contains IncludeHeader flags");
@@ -271,7 +282,7 @@ namespace Force.Blazer
 			_haveMultipleFiles = (flags & BlazerFlags.MultipleFiles) != 0;
 			_shouldHaveComment = (flags & BlazerFlags.IncludeComment) != 0;
 
-			if (!string.IsNullOrEmpty(password))
+			if (!(password == null || password.Length == 0))
 			{
 				_decryptHelper = new DecryptHelper(password);
 				var encHeader = new byte[_decryptHelper.GetHeaderLength()];
@@ -289,9 +300,9 @@ namespace Force.Blazer
 			ReadCommonBlocks();
 		}
 
-		private void InitByHeader(string password = null)
+		private void InitByHeader(byte[] password = null)
 		{
-			_decryptHelper = string.IsNullOrEmpty(password) ? new NullDecryptHelper() : new DecryptHelper(password);
+			_decryptHelper = password == null || password.Length == 0 ? new NullDecryptHelper() : new DecryptHelper(password);
 
 			ReadAndValidateHeader();
 
@@ -305,7 +316,7 @@ namespace Force.Blazer
 				var commentBytes = GetNextChunk(true);
 				if (_encodingType != (byte)BlazerBlockType.Comment)
 					throw new InvalidOperationException("Invalid comment header");
-				_comment = Encoding.UTF8.GetString(commentBytes.Buffer, commentBytes.Offset, commentBytes.Count);
+				_commentRaw = commentBytes.ExtractToSeparateArray();
 			}
 
 			// todo: refactor this
