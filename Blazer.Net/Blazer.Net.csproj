@@ -65,7 +65,7 @@
     <Compile Include="Algorithms\BufferInfo.cs" />
     <Compile Include="BlazerFlushMode.cs" />
     <Compile Include="BlazerPatternedHelper.cs" />
-    <Compile Include="Encyption\ISO10126TransformEmulator.cs" />
+    <Compile Include="Encyption\Iso10126TransformEmulator.cs" />
     <Compile Include="Helpers\FileHeaderHelper.cs" />
     <Compile Include="Algorithms\StreamEncoderHigh.cs" />
     <Compile Include="Algorithms\Crc32C\Crc32C.cs" />

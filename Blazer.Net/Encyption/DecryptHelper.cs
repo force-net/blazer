@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 
 using Force.Blazer.Algorithms;
 
@@ -51,6 +52,10 @@ namespace Force.Blazer.Encyption
 			return 24;
 		}
 
+		private long _counter;
+
+		private bool _useCounter;
+
 		public override void Init(byte[] buffer, int maxBlockSize)
 		{
 			if (buffer.Length != GetHeaderLength())
@@ -73,10 +78,27 @@ namespace Force.Blazer.Encyption
 			{
 				var toEncrypt = new byte[16];
 				Buffer.BlockCopy(buffer, 8, toEncrypt, 0, 8);
-				Buffer.BlockCopy(new[] { (byte)'B', (byte)'l', (byte)'a', (byte)'z', (byte)'e', (byte)'r', (byte)'!', (byte)'!' }, 0, toEncrypt, 8, 8);
+				Buffer.BlockCopy(new[] { (byte)'B', (byte)'l', (byte)'a', (byte)'z', (byte)'e', (byte)'r', (byte)'!', (byte)'?' }, 0, toEncrypt, 8, 8);
 				var encoded = encryptor.TransformFinalBlock(toEncrypt, 0, 16);
 				if (encoded.Take(8).Where((t, i) => buffer[i + 16] != t).Any())
-					throw new InvalidOperationException("Invalid password");
+				{
+					// trying second variant
+					toEncrypt[15] = (byte)'!';
+					encoded = encryptor.TransformFinalBlock(toEncrypt, 0, 16);
+					if (encoded.Take(8).Where((t, i) => buffer[i + 16] != t).Any())
+					{
+						throw new InvalidOperationException("Invalid password");
+					}
+					else
+					{
+						_useCounter = false;
+					}
+				}
+				else
+				{
+					_useCounter = true;
+					_counter = 0;
+				}
 			}
 		}
 
@@ -84,9 +106,17 @@ namespace Force.Blazer.Encyption
 		{
 			using (var decryptor = _aes.CreateDecryptor())
 			{
-				var cnt = decryptor.TransformBlock(data, offset, length - offset, _buffer, 0);
-				// dummy data in header (8)
-				return new BufferInfo(_buffer, 8, cnt);
+				var ob = _buffer;
+				var cnt = decryptor.TransformBlock(data, offset, length - offset, ob, 0);
+				if (_useCounter)
+				{
+					var cv = ((long)ob[0] << 0) | ((long)ob[1] << 8) | ((long)ob[2] << 16) | ((long)ob[3] << 24) | ((long)ob[4] << 32) | ((long)ob[5] << 40) | ((long)ob[6] << 48) | ((long)ob[7] << 56);
+					if (_counter++ != cv)
+						throw new InvalidOperationException("Invalid encrypted block. Duplicated or damaged.");
+				}
+
+				// else dummy data in header (8)
+				return new BufferInfo(ob, 8, cnt);
 			}
 		}
 
