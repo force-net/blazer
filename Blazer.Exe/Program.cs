@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 using Force.Blazer.Algorithms;
 using Force.Blazer.Exe.CommandLine;
+using Force.Blazer.Helpers;
 
 namespace Force.Blazer.Exe
 {
@@ -176,11 +177,7 @@ namespace Force.Blazer.Exe
 					sourceData = tmpOutStream.ToArray();
 				}
 
-				var encoder = compressionOptions.Encoder;
-				encoder.Init(sourceData.Length);
-				var res = encoder.Encode(sourceData, 0, sourceData.Length);
-				outStream.Write(new[] { (byte)sourceData.Length, (byte)(sourceData.Length >> 8), (byte)(sourceData.Length >> 16), (byte)(sourceData.Length >> 24) }, 0, 4);
-				outStream.Write(res.Buffer, res.Offset, res.Count);
+				DataArrayCompressorHelper.CompressDataToArrayAndWriteToStream(sourceData, compressionOptions.Encoder, outStream);
 				outStream.Close();
 			}
 			else
@@ -326,11 +323,7 @@ namespace Force.Blazer.Exe
 				var ms = new MemoryStream();
 				inStreamSource.CopyTo(ms);
 				var comprArray = ms.ToArray();
-				var uncomprLength = comprArray[0] | (comprArray[1] << 8) | (comprArray[2] << 16) | (comprArray[3] << 24);
-				var decoder = decOptions.Decoder;
-				decoder.Init(uncomprLength);
-				var decoded = decoder.Decode(comprArray, 4, comprArray.Length, true);
-				outStream = new MemoryStream(decoded.Buffer, decoded.Offset, decoded.Count);
+				outStream = DataArrayCompressorHelper.DecompressDataArrayToReadableStream(comprArray, decOptions.Decoder);
 			}
 			else
 			{
@@ -338,7 +331,9 @@ namespace Force.Blazer.Exe
 				outStream = outBlazerStream;
 			}
 
-			if (opt.NoFileName && outBlazerStream.HaveMultipleFiles)
+			hasMultipleFiles = outBlazerStream != null && outBlazerStream.HaveMultipleFiles;
+			
+			if (opt.NoFileName && hasMultipleFiles)
 			{
 				Console.Error.WriteLine("Cannot decompress without filename when archive contains multiple files");
 				return 1;
@@ -354,10 +349,8 @@ namespace Force.Blazer.Exe
 			}
 
 			// nothing to do
-			if (!outBlazerStream.HaveMultipleFiles && !customOutFileNames.Any(y => y.IsMatch(fileName)))
+			if (!hasMultipleFiles && !customOutFileNames.Any(y => y.IsMatch(fileName)))
 				return 0;
-
-			hasMultipleFiles = outBlazerStream.HaveMultipleFiles;
 
 			if (opt.Stdout) outFile[0] = Console.OpenStandardOutput();
 			if (!hasMultipleFiles)

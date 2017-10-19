@@ -8,7 +8,7 @@ using Force.Blazer.Algorithms;
 
 namespace Force.Blazer.Encyption
 {
-	public class NullEncryptHelper
+	internal class NullEncryptHelper
 	{
 		public virtual BufferInfo Encrypt(byte[] data, int offset, int length)
 		{
@@ -22,7 +22,7 @@ namespace Force.Blazer.Encyption
 	}
 
 	[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:FileMayOnlyContainASingleClass", Justification = "Reviewed. Suppression is OK here.")]
-	public class EncryptHelper : NullEncryptHelper
+	internal class EncryptHelper : NullEncryptHelper
 	{
 		private const int PrefixSize = 8;
 

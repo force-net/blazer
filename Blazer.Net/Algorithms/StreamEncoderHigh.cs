@@ -21,7 +21,7 @@ namespace Force.Blazer.Algorithms
 		public const int HASHARR_CNT = 32;
 
 		private const int MIN_SEQ_LEN = 4;
-		
+
 		// carefully selected random number
 		private const uint MUL = 1527631329;
 
@@ -164,7 +164,7 @@ namespace Force.Blazer.Algorithms
 							checkCnt = checkCntLocal;
 							hashVal = hashValLocal;
 						}
-					} 
+					}
 					else
 						break;
 				}
@@ -179,7 +179,7 @@ namespace Force.Blazer.Algorithms
 						int backRefLocal = idxIn - hashValLocal;
 						if (backRefLocal < MAX_BACK_REF)
 						{
-							var cntLocal = FindMaxSequence(bufferIn, iterMax, idxIn + 1 - 3, hashValLocal - 3, cnt - 1) + (backRefLocal < 257 ? 1 : 0);
+							var cntLocal = FindMaxSequence(bufferIn, bufferInLength, idxIn + 1 - 3, hashValLocal - 3, cnt - 1) + (backRefLocal < 257 ? 1 : 0);
 							if (cntLocal > cnt)
 							{
 								checkCnt = 0;
@@ -201,15 +201,23 @@ namespace Force.Blazer.Algorithms
 					cntLit = idxIn - lastProcessedIdxIn;
 
 					checkCnt -= 3;
-					while (checkCnt-- > 0)
+					if (checkCnt + idxIn > iterMax)
 					{
-						hashVal++;
-						idxIn++;
+						// last block no requirement to update hashes
+						idxIn += checkCnt;
+					}
+					else
+					{
+						while (checkCnt-- > 0)
+						{
+							// hashVal++;
+							idxIn++;
 
-						elemP0 = bufferIn[idxIn];
-						mulEl = (mulEl << 8) | elemP0;
-						hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
-						hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn + globalOfs;
+							elemP0 = bufferIn[idxIn];
+							mulEl = (mulEl << 8) | elemP0;
+							hashKey = (mulEl * MUL) >> (32 - HASH_TABLE_BITS);
+							hashArr[(hashArrPos[hashKey]++) & (HASHARR_CNT - 1)][hashKey] = idxIn + globalOfs;
+						}
 					}
 
 					int seqLen = idxIn - cntLit - lastProcessedIdxIn - MIN_SEQ_LEN + 3/* - isBig*/;

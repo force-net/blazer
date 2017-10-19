@@ -338,7 +338,7 @@ extern "C" __declspec(dllexport) __int32 blazer_stream_decompress_block(unsigned
 		}
 
 		unsigned char* maxOutLength = bufferOut + litCnt + seqCnt;
-		if (maxOutLength >= bufferOutEnd)
+		if (maxOutLength > bufferOutEnd)
 			return -1;
 
 		if (bufferIn + litCnt > bufferInEnd)

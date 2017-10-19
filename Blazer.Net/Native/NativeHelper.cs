@@ -10,7 +10,7 @@ namespace Force.Blazer.Native
 	/// </summary>
 	public static class NativeHelper
 	{
-		private const string NativeSuffix = "0.8.2.8";
+		private const string NativeSuffix = "0.8.3.9";
 
 		private static readonly bool _isNativePossible;
 

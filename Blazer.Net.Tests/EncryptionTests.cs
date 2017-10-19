@@ -176,7 +176,8 @@ namespace Blazer.Net.Tests
 			Console.WriteLine(total / sw.Elapsed.TotalSeconds);
 		}
 
-		[Test]
+		// for future
+		/*[Test]
 		public void Check_Encrypt_Peformance()
 		{
 			var b = new byte[65530];
@@ -191,7 +192,7 @@ namespace Blazer.Net.Tests
 
 			Console.WriteLine(total / 1048576.0 / sw.Elapsed.TotalSeconds);
 			sw.Restart();
-		}
+		}*/
 
 		[Test]
 		public void Duplicate_Data_Blocks_Should_Be_Catched_on_Decryption()

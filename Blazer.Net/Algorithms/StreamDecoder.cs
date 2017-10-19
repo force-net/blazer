@@ -153,7 +153,7 @@ namespace Force.Blazer.Algorithms
 				}
 
 				var maxOutLength = idxOut + litCnt + seqCnt;
-				if (maxOutLength >= bufferOutLength)
+				if (maxOutLength > bufferOutLength)
 				{
 					if (resizeOutBufferIfNeeded)
 					{

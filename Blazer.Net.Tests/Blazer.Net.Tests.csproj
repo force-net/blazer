@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="BigDataTests.cs" />
     <Compile Include="Crc32Tests.cs" />
+    <Compile Include="DataArrayTests.cs" />
     <Compile Include="EncryptionTests.cs" />
     <Compile Include="IntegrityHelper.cs" />
     <Compile Include="IntegrityTests.cs" />

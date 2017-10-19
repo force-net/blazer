@@ -41,10 +41,24 @@
 			Length = length;
 		}
 
+		/// <summary>
+		/// Extracts body to separate byte array
+		/// </summary>
+		/// <returns>new array</returns>
 		public byte[] ExtractToSeparateArray()
 		{
-			var res = new byte[Length];
-			System.Buffer.BlockCopy(Buffer, Offset, res, 0, Count);
+			return ExtractToSeparateArray(0);
+		}
+
+		/// <summary>
+		/// Extracts body to separate byte array
+		/// </summary>
+		/// <param name="offset">additional offset for new array</param>
+		/// <returns>new array</returns>
+		public byte[] ExtractToSeparateArray(int offset)
+		{
+			var res = new byte[Count + offset];
+			System.Buffer.BlockCopy(Buffer, Offset, res, offset, Count);
 			return res;
 		}
 	}
