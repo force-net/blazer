@@ -3,25 +3,31 @@
   <metadata>
     <id>Blazer.Net</id>
     <title>Blazer.Net</title>
-    <version>0.10.0-beta1</version>
+    <version>0.10.0</version>
     <authors>force</authors>
     <owners>force</owners>
     <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
     <projectUrl>https://github.com/force-net/blazer</projectUrl>
-    <!--iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl-->
+    <iconUrl>http://files.force-net.com/blazer-nuget-ico.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>Blazer is high-performance, low compression archiver.</summary>
     <description>
-    Blazer is high-performance, low compression archiver.
-    Main usage to work with streams, but can be used as general archiver or for reducing application size by compressing it resources.
-    Compression rate is comparable (slightly better) to LZ4 and Snappy and compression speed is really faster than GZip.
-	Blazer contains all standard features for archives, but also it is possible to use control commands in stream, encrypt archive, use it as simple (but fast) crc32c calulator, perform patterned compresstion and many others features.
+Blazer is high-performance, low compression archiver.
+Main usage to work with streams, but can be used as general archiver or for reducing application size by compressing it resources.
+Compression rate is comparable (slightly better) to LZ4 and Snappy and compression speed is really faster than GZip.
+Blazer contains all standard features for archives, but also it is possible to use control commands in stream, encrypt archive, use it as simple (but fast) crc32c calulator, perform patterned compresstion and many others features.
 
-	See project site for detailed information.
+See project site for detailed information.
     </description>
     <releaseNotes>
-    	- Added support to .NET Core
-    	- Changed padding mode to full encryption (due lack of padding support for .NET Core)
+- Stable .NET Core version
+- Padding mode was implemented manually to relate normal .NET version
+- Changed block encryption to avoid attacks with packet repeating
+- Added PasswordRaw and CommentRaw (binary data in this fields)
+- Some fixes and improvements
+- Added data array helper (for compressing/decompressing resources in byte array way)
+- Improved software Crc32C
+- Added option to skip real decompression (useful for file lists)
     </releaseNotes>
     <copyright>Copyright by Force 2016-2017</copyright>
     <tags>.NET fast compression archive crc32c archiver</tags>
