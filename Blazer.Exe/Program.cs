@@ -443,7 +443,7 @@ namespace Force.Blazer.Exe
 
 			Stream inStreamSource = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(fileOptions.ArchiveName);
 
-			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull };
+			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull, DoNotPerformDecoding = true };
 			StringBuilder header = new StringBuilder();
 			header.AppendLine("   Date      Time    Attr         Size  Name");
 			header.AppendLine("------------------- ----- ------------  ------------------------");

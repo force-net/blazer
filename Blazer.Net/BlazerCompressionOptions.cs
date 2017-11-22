@@ -41,6 +41,7 @@ namespace Force.Blazer
 		/// <summary>
 		/// Encrypt full flag. Fully encypted streams does not reveal any information about inner data (blazer header is also encypted)
 		/// </summary>
+		/// <remarks>Flush can be unsupported with this mode</remarks>
 		public bool EncryptFull { get; set; }
 
 		/// <summary>

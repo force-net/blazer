@@ -297,7 +297,7 @@ namespace Force.Blazer
 
 			if (_flushMode == BlazerFlushMode.AutoFlush)
 				Flush();
-			else if (_flushMode == BlazerFlushMode.RespectFlush && buffer.Length < offset + count) // smart flush will flush data, if it smaller than buffer size. otherwise we use large binary data and it not required to be flushed
+			else if (_flushMode == BlazerFlushMode.SmartFlush && buffer.Length < offset + count) // smart flush will flush data, if it smaller than buffer size. otherwise we use large binary data and it not required to be flushed
 				Flush();
 		}
 

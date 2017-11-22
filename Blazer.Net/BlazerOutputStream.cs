@@ -146,6 +146,8 @@ namespace Force.Blazer
 
 		private BlazerFileInfo _fileInfo;
 
+		private bool _doNotPerformDecoding;
+
 		/// <summary>
 		/// Returns information about compressed file, if exists (and only one file in archive)
 		/// </summary>
@@ -175,7 +177,7 @@ namespace Force.Blazer
 		{
 			get
 			{
-				return _decoder.GetAlgorithmId();
+				return (BlazerAlgorithm)_algorithmId;
 			}
 		}
 
@@ -236,6 +238,7 @@ namespace Force.Blazer
 			_fileInfoCallback = options.FileInfoCallback ?? (f => { });
 			_doNotFireInfoCallbackOnOneFile = options.DoNotFireInfoCallbackOnOneFile;
 			_noSeek = options.NoSeek;
+			_doNotPerformDecoding = options.DoNotPerformDecoding;
 
 			if (options.EncyptFull)
 			{
@@ -251,10 +254,14 @@ namespace Force.Blazer
 				var decoder = options.Decoder;
 				if (decoder == null)
 				{
-					if (options.CompressionOptions.Encoder == null)
-						throw new InvalidOperationException("Missing decoder information");
-					options.SetDecoderByAlgorithm(options.CompressionOptions.Encoder.GetAlgorithmId());
-					decoder = options.Decoder;
+					if (_doNotPerformDecoding) decoder = new NoCompressionDecoder();
+					else
+					{
+						if (options.CompressionOptions.Encoder == null)
+							throw new InvalidOperationException("Missing decoder information");
+						options.SetDecoderByAlgorithm(options.CompressionOptions.Encoder.GetAlgorithmId());
+						decoder = options.Decoder;
+					}
 				}
 
 				InitByFlags(options.CompressionOptions.GetFlags(), decoder, password);
@@ -389,7 +396,10 @@ namespace Force.Blazer
 						goto start;
 					}
 					else
-						throw new InvalidOperationException("Invalid header");
+					{
+						if (!_doNotPerformDecoding)
+							throw new InvalidOperationException("Invalid header");
+					}
 				}
 
 				var decoded = _decoder.Decode(info.Buffer, info.Offset, info.Length, _encodingType != 0);
@@ -424,10 +434,10 @@ namespace Force.Blazer
 			if ((flags & (~BlazerFlags.AllKnownFlags)) != 0)
 				throw new InvalidOperationException("Invalid flag combination. Try to use newer version of Blazer");
 
-			_decoder = EncoderDecoderFactory.GetDecoder((BlazerAlgorithm)((((uint)flags) >> 4) & 15));
+			_algorithmId = (byte)((((uint)flags) >> 4) & 15);
+			_decoder = _doNotPerformDecoding ? new NoCompressionDecoder() : EncoderDecoderFactory.GetDecoder((BlazerAlgorithm)_algorithmId);
 			_maxUncompressedBlockSize = 1 << ((((int)flags) & 15) + 9);
 			_maxUncompressedBlockSizeOrig = _maxUncompressedBlockSize;
-			_algorithmId = (byte)_decoder.GetAlgorithmId();
 			_includeCrc = (flags & BlazerFlags.IncludeCrc) != 0;
 			_includeFooter = (flags & BlazerFlags.IncludeFooter) != 0;
 			_shouldHaveFileInfo = (flags & BlazerFlags.OnlyOneFile) != 0;

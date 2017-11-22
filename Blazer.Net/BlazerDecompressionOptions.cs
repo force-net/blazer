@@ -81,6 +81,11 @@ namespace Force.Blazer
 		public bool DoNotFireInfoCallbackOnOneFile { get; set; }
 
 		/// <summary>
+		/// Skip real decoding. This option can be useful for 'list' or 'test' modes, when it required to get some info (e.g. files list) without real decoding
+		/// </summary>
+		public bool DoNotPerformDecoding { get; set; }
+
+		/// <summary>
 		/// Create default options
 		/// </summary>
 		public static BlazerDecompressionOptions CreateDefault()

@@ -101,5 +101,12 @@ namespace Blazer.Net.Tests
 Артем нехотя поднялся со своего места у костра и, перетягивая со спины на грудь автомат, двинулся во тьму. Стоя на самом краю освещенного пространства, он демонстративно, как можно громче и внушительней, щелкнул затвором и хрипло крикнул: — Стоять! Пароль!");
 			IntegrityHelper.StreamEncoderCheckCompressDecompress(buf);
 		}
+
+		[Test]
+		public void Test_Zero_Bytes()
+		{
+			var len = IntegrityHelper.StreamEncoderCheckCompressDecompress(new byte[0]);
+			Assert.That(len, Is.EqualTo(0));
+		}
 	}
 }
