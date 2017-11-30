@@ -62,7 +62,8 @@ namespace Force.Blazer
 		/// <summary>
 		/// Disable seeking for inner stream
 		/// </summary>
-		/// <remarks>By default, <see cref="BlazerOutputStream"/> checks is stream seekable. But with this flag this check can be disabled and seek will not be performed for any stream</remarks>
+		/// <remarks>By default, <see cref="BlazerOutputStream"/> checks is stream seekable. But with this flag this check can be disabled and seek will not be performed for any stream.
+		/// This also can be useful for muliple joined streams, when only part of real stream is a Blazer archive</remarks>
 		public bool NoSeek { get; set; }
 
 		/// <summary>

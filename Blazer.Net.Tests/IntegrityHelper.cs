@@ -10,12 +10,13 @@ namespace Blazer.Net.Tests
 {
 	public static class IntegrityHelper
 	{
-		public static void CheckCompressDecompress(byte[] inData, BlazerCompressionOptions options, Func<Stream, Stream> decoderCreator = null, int bufferSize = 81920)
+		public static int CheckCompressDecompress(byte[] inData, BlazerCompressionOptions options, Func<Stream, Stream> decoderCreator = null, int bufferSize = 81920)
 		{
 			var compressed = CompressData(inData, options, bufferSize);
 			var decompressed = DecompressData(compressed, decoderCreator, bufferSize);
 			
 			CollectionAssert.AreEqual(inData, decompressed);
+			return compressed.Length;
 		}
 
 		public static byte[] CompressData(byte[] inData, BlazerCompressionOptions options, int bufferSize = 81920)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 using Force.Blazer;
 using Force.Blazer.Algorithms;
@@ -78,6 +79,20 @@ namespace Blazer.Net.Tests
 			var arr = DataArrayCompressorHelper.CompressDataToArray(bufferIn, EncoderDecoderFactory.GetEncoder(algorithm));
 			var bufferOut = DataArrayCompressorHelper.DecompressDataArray(arr, EncoderDecoderFactory.GetDecoder(algorithm));
 			CollectionAssert.AreEqual(bufferIn, bufferOut);
+		}
+
+		[Test]
+		[TestCase(BlazerAlgorithm.NoCompress)]
+		[TestCase(BlazerAlgorithm.Block)]
+		[TestCase(BlazerAlgorithm.Stream)]
+		public void DataArrayCompressionHelper_Should_Encode_Decode_With_Offset(BlazerAlgorithm algorithm)
+		{
+			var bufferIn = new byte[] { 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
+			var arr = DataArrayCompressorHelper.CompressDataToArray(bufferIn, 1, bufferIn.Length - 2, EncoderDecoderFactory.GetEncoder(algorithm));
+			var dupArray = new byte[arr.Length + 10];
+			Buffer.BlockCopy(arr, 0, dupArray, 2, arr.Length);
+			var bufferOut = DataArrayCompressorHelper.DecompressDataArray(dupArray, 2, arr.Length, EncoderDecoderFactory.GetDecoder(algorithm));
+			CollectionAssert.AreEqual(bufferIn.Skip(1).Take(bufferIn.Length - 2).ToArray(), bufferOut);
 		}
 	}
 }

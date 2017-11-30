@@ -464,12 +464,15 @@ namespace Force.Blazer
 
 			if (_includeFooter && _innerStream.CanSeek && !_noSeek)
 			{
-				var position = _innerStream.Seek(0, SeekOrigin.Current);
+				// Seek can return different results from Position
+				// var position = _innerStream.Seek(0, SeekOrigin.Current);
+				var position = _innerStream.Position;
 				_innerStream.Seek(-4, SeekOrigin.End);
 				if (!EnsureRead(buf, 0, 4))
 					throw new Exception("Footer is missing");
 				ValidateFooter(buf);
-				_innerStream.Seek(position, SeekOrigin.Begin);
+				// _innerStream.Seek(position, SeekOrigin.Begin);
+				_innerStream.Position = position;
 			}
 		}
 
