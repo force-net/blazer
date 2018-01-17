@@ -209,5 +209,14 @@ namespace Blazer.Net.Tests
 			Assert.That(oos.Read(new byte[100], 0, 100), Is.EqualTo(0));
 			Assert.That(oos.Read(new byte[100], 0, 100), Is.EqualTo(0));
 		}
+
+		// checking strange MemoryStream logic
+		/*[Test]
+		public void Test()
+		{
+			var stream = new MemoryStream(new byte[1000], 10, 100);
+
+			Assert.That(stream.Position, Is.EqualTo(stream.Seek(0, SeekOrigin.Current)));
+		}*/
 	}
 }

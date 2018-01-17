@@ -10,14 +10,24 @@ namespace Force.Blazer.Native
 	/// </summary>
 	public static class NativeHelper
 	{
+		// check tests if changed
 		private const string NativeSuffix = "0.8.3.9";
+
+#if NETCORE
+		private const string ResourcePrefix = "Blazer.Net.Resources.Blazer.Native.";
+#else
+		private const string ResourcePrefix = "Force.Blazer.Resources.Blazer.Native.";
+#endif
 
 		private static readonly bool _isNativePossible;
 
 		[DllImport("Kernel32.dll")]
 		private static extern IntPtr LoadLibrary(string path);
 
-		internal static bool IsNativeAvailable { get; private set; }
+		/// <summary>
+		/// Returns is native library is available for usage
+		/// </summary>
+		public static bool IsNativeAvailable { get; private set; }
 
 		static NativeHelper()
 		{
@@ -47,8 +57,11 @@ namespace Force.Blazer.Native
 			var assembly = typeof(NativeHelper).Assembly;
 #endif
 			using (var stream =
-					assembly.GetManifestResourceStream("Force.Blazer.Resources.Blazer.Native." + architectureSuffix + ".dll"))
+					assembly.GetManifestResourceStream(ResourcePrefix + architectureSuffix + ".dll"))
 			{
+				if (stream == null)
+					throw new InvalidOperationException("Missing resource stream");
+
 #if NETCORE
 				var assemblyName = assembly.GetName();
 #else
@@ -56,8 +69,9 @@ namespace Force.Blazer.Native
 #endif				
 				
 				var dllPath = Path.Combine(Path.GetTempPath(), assemblyName.Name + "." + NativeSuffix, architectureSuffix);
+				
 				var fileName = Path.Combine(dllPath, "Blazer.Native.dll");
-				if (!File.Exists(fileName))
+				if (!File.Exists(fileName) || new FileInfo(fileName).Length == 0)
 				{
 					Directory.CreateDirectory(dllPath);
 					using (var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, 16386/*, FileOptions.DeleteOnClose*/))

@@ -3,7 +3,7 @@
   <metadata>
     <id>Blazer.Net</id>
     <title>Blazer.Net</title>
-    <version>0.10.0</version>
+    <version>0.10.1</version>
     <authors>force</authors>
     <owners>force</owners>
     <licenseUrl>https://github.com/force-net/blazer/blob/develop/LICENSE</licenseUrl>
@@ -20,17 +20,19 @@ Blazer contains all standard features for archives, but also it is possible to u
 See project site for detailed information.
     </description>
     <releaseNotes>
-- Stable .NET Core version
-- Padding mode was implemented manually to relate normal .NET version
-- Changed block encryption to avoid attacks with packet repeating
-- Added PasswordRaw and CommentRaw (binary data in this fields)
-- Some fixes and improvements
-- Added data array helper (for compressing/decompressing resources in byte array way)
-- Improved software Crc32C
-- Added option to skip real decompression (useful for file lists)
+- Fixed an issue with loading of native library for dotnet core on Windows
+- Fixed issue with seeking of MemoryStream with offset (Position/Seek gives different results)
+- Improved Api for DataArrayHelper
     </releaseNotes>
-    <copyright>Copyright by Force 2016-2017</copyright>
+    <copyright>Copyright by Force 2016-2018</copyright>
     <tags>.NET fast compression archive crc32c archiver</tags>
+    <dependencies>
+      <group targetFramework="net40">
+      </group>
+      <group targetFramework=".NETStandard1.3">
+        <dependency id="NETStandard.Library" version="[1.6.1, )" />
+      </group>
+    </dependencies>
   </metadata>
   <files>
   	<file src="bin\Release\Blazer.Net.*" target="lib\net40" />
