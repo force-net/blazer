@@ -146,7 +146,7 @@ namespace Force.Blazer
 
 		private BlazerFileInfo _fileInfo;
 
-		private bool _doNotPerformDecoding;
+		private readonly bool _doNotPerformDecoding;
 
 		/// <summary>
 		/// Returns information about compressed file, if exists (and only one file in archive)
@@ -218,7 +218,10 @@ namespace Force.Blazer
 
 		private Action<byte[], int, int> _controlDataCallback { get; set; }
 
-		private Action<BlazerFileInfo> _fileInfoCallback { get; set; }
+		/// <summary>
+		/// Callback on new file info
+		/// </summary>
+		public Action<BlazerFileInfo> FileInfoCallback { get; set; }
 
 		private bool _doNotFireInfoCallbackOnOneFile { get; set; }
 
@@ -235,7 +238,7 @@ namespace Force.Blazer
 
 			var password = options.PasswordRaw;
 			_controlDataCallback = options.ControlDataCallback ?? ((b, o, c) => { });
-			_fileInfoCallback = options.FileInfoCallback ?? (f => { });
+			FileInfoCallback = options.FileInfoCallback ?? (f => { });
 			_doNotFireInfoCallbackOnOneFile = options.DoNotFireInfoCallbackOnOneFile;
 			_noSeek = options.NoSeek;
 			_doNotPerformDecoding = options.DoNotPerformDecoding;
@@ -335,7 +338,7 @@ namespace Force.Blazer
 
 				_fileInfo = FileHeaderHelper.ParseFileHeader(fInfo.Buffer, fInfo.Offset, fInfo.Count);
 				if (!_haveMultipleFiles && !_doNotFireInfoCallbackOnOneFile)
-				_fileInfoCallback(_fileInfo);
+					FileInfoCallback(_fileInfo);
 			}
 		}
 
@@ -392,7 +395,7 @@ namespace Force.Blazer
 					{
 						// current file info
 						_fileInfo = FileHeaderHelper.ParseFileHeader(info.Buffer, info.Offset, info.Count);
-						_fileInfoCallback(_fileInfo);
+						FileInfoCallback(_fileInfo);
 						goto start;
 					}
 					else

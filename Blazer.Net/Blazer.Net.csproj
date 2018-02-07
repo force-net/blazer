@@ -66,6 +66,7 @@
     <Compile Include="BlazerFlushMode.cs" />
     <Compile Include="BlazerPatternedHelper.cs" />
     <Compile Include="Encyption\Iso10126TransformEmulator.cs" />
+    <Compile Include="Helpers\BlazerFileHelper.cs" />
     <Compile Include="Helpers\DataArrayCompressorHelper.cs" />
     <Compile Include="Helpers\FileHeaderHelper.cs" />
     <Compile Include="Algorithms\StreamEncoderHigh.cs" />

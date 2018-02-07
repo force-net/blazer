@@ -34,7 +34,12 @@ namespace Force.Blazer.Exe
 		public override void Close()
 		{
 			_baseStream.Close();
-			DoStats();
+			if (_doStats)
+			{
+				DoStats();
+				if (_sw.ElapsedMilliseconds > 0)
+					Console.WriteLine();
+			}
 		}
 
 		public override void Flush()

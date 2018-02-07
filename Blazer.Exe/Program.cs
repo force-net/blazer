@@ -196,7 +196,11 @@ namespace Force.Blazer.Exe
 							{
 								var blazerFileInfo = BlazerFileInfo.FromFileName(fileName, !opt.NoPathName);
 								outFile.WriteFileInfo(blazerFileInfo);
-								if ((blazerFileInfo.Attributes & FileAttributes.Directory) != 0)
+								if ((blazerFileInfo.Attributes & FileAttributes.Directory) != 0) continue;
+							}
+							else
+							{
+								if (compressionOptions.FileInfo != null && (compressionOptions.FileInfo.Attributes & FileAttributes.Directory) != 0)
 									continue;
 							}
 
@@ -218,108 +222,43 @@ namespace Force.Blazer.Exe
 
 			var fileOptions = FileNameHelper.ParseDecompressOptions(options);
 
-			if (fileOptions == null) return 1;
+			if (fileOptions == null)
+				return 1;
 
 			Regex[] customOutFileNames = fileOptions.SourceFiles
-					.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim())
-					.Select(x => new Regex(new string(x.SelectMany(y => char.IsLetterOrDigit(y) || y == '_' ? new[] { y } : (y == '*' ? new[] { '.', '*' } : new[] { '\\', y })).ToArray())))
-					.ToArray();
+							.Where(x => !string.IsNullOrWhiteSpace(x))
+							.Select(x => x.Trim())
+							.Select(x => new Regex(new string(x.SelectMany(y => char.IsLetterOrDigit(y) || y == '_' ? new[] { y } : (y == '*' ? new[] { '.', '*' } : new[] { '\\', y })).ToArray())))
+							.ToArray();
 
 			if (customOutFileNames.Length == 0)
 				customOutFileNames = new[] { new Regex(".*") };
 
 			Stream inStreamSource = opt.Stdin ? Console.OpenStandardInput() : File.OpenRead(fileOptions.ArchiveName);
 
-			var decOptions = new BlazerDecompressionOptions(opt.Password) { EncyptFull = opt.EncryptFull, DoNotFireInfoCallbackOnOneFile = true };
+			var decOptions = new BlazerDecompressionOptions(opt.Password)
+								{
+									EncyptFull = opt.EncryptFull,
+									DoNotFireInfoCallbackOnOneFile = true
+								};
 
 			BlazerOutputStream outBlazerStream = null;
 			Stream outStream;
-			BlazerFileInfo prevFile = null;
-			Stream[] outFile = { null };
 			bool forceAllOverride = false;
 			bool forceAllSkip = opt.Stdin && !opt.Force; // nothing to do, just skip
-			bool hasMultipleFiles = false;
-			bool doExit = false;
-			decOptions.FileInfoCallback = fInfo =>
-				{
-					if (opt.Stdout)
-						return;
-
-					if (prevFile != null)
-					{
-						if (outFile[0] != null)
-						{
-							outFile[0].Flush();
-							outFile[0].Close();
-							outFile[0] = null;
-						}
-
-						prevFile.ApplyToFile();
-						prevFile = null;
-					}
-
-					var fInfoFileName = fInfo.FileName;
-					if (customOutFileNames != null && !customOutFileNames.Any(y => y.IsMatch(fInfoFileName)))
-						return;
-
-					prevFile = fInfo;
-					if ((fInfo.Attributes & FileAttributes.Directory) != 0)
-					{
-						if (!opt.NoPathName && !Directory.Exists(fInfoFileName)) Directory.CreateDirectory(fInfoFileName);
-					}
-					else
-					{
-						if (opt.NoPathName) fInfoFileName = Path.GetFileName(fInfoFileName);
-
-						if (File.Exists(fInfoFileName))
-						{
-							if (forceAllSkip)
-								return;
-							if (!opt.Force && !forceAllOverride)
-							{
-// ReSharper disable AccessToModifiedClosure
-								Console.WriteLine("Target " + fInfoFileName + " already exists. Overwrite? (Y)es (N)o" + (hasMultipleFiles ? " (A)ll (S)kip all existing" : string.Empty));
-// ReSharper restore AccessToModifiedClosure
-								var readLine = Console.ReadLine().Trim().ToLowerInvariant();
-
-								forceAllOverride = readLine.IndexOf("a", StringComparison.Ordinal) >= 0;
-								forceAllSkip = readLine.IndexOf("s", StringComparison.Ordinal) >= 0;
-								if (!forceAllOverride && readLine.IndexOf("y", StringComparison.Ordinal) < 0)
-								{
-// ReSharper disable AccessToModifiedClosure
-									if (!hasMultipleFiles)
-									{
-										doExit = true;
-										return;
-									}
-// ReSharper restore AccessToModifiedClosure
-
-									var sts = outFile[0] as StatStream;
-									if (sts != null)
-										sts.Prefix = "Skipping " + fInfo.FileName + "  ";
-									return;
-								}
-							}
-
-							new FileStream(fInfoFileName, FileMode.Truncate, FileAccess.Write).Close();
-						}
-
-						var directoryName = Path.GetDirectoryName(fInfoFileName);
-						if (!string.IsNullOrEmpty(directoryName)) Directory.CreateDirectory(directoryName);
-						outFile[0] = new StatStream(new FileStream(fInfoFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
-						var statStream = outFile[0] as StatStream;
-						Console.WriteLine();
-						statStream.Prefix = "Extracting " + fInfo.FileName + "  ";
-					}
-				};
 
 			if (opt.DataArray)
 			{
 				var mode = (opt.Mode ?? "block").ToLowerInvariant();
-				if (mode == "stream" || mode == "streamhigh") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Stream);
-				else if (mode == "none") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.NoCompress);
-				else if (mode == "block") decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Block);
-				else throw new InvalidOperationException("Unsupported mode");
+				if (mode == "stream" || mode == "streamhigh")
+					decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Stream);
+				else if (mode == "none")
+					decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.NoCompress);
+				else if (mode == "block")
+					decOptions.SetDecoderByAlgorithm(BlazerAlgorithm.Block);
+				else
+					throw new InvalidOperationException("Unsupported mode");
+
 				var ms = new MemoryStream();
 				inStreamSource.CopyTo(ms);
 				var comprArray = ms.ToArray();
@@ -331,8 +270,8 @@ namespace Force.Blazer.Exe
 				outStream = outBlazerStream;
 			}
 
-			hasMultipleFiles = outBlazerStream != null && outBlazerStream.HaveMultipleFiles;
-			
+			bool hasMultipleFiles = outBlazerStream != null && outBlazerStream.HaveMultipleFiles;
+
 			if (opt.NoFileName && hasMultipleFiles)
 			{
 				Console.Error.WriteLine("Cannot decompress without filename when archive contains multiple files");
@@ -340,44 +279,132 @@ namespace Force.Blazer.Exe
 			}
 
 			var fileName = Path.GetFileName(fileOptions.ArchiveName ?? "dummy");
-			if (fileName.EndsWith(".blz")) fileName = fileName.Substring(0, fileName.Length - 4);
-			else fileName += (fileName.EndsWith(".") ? string.Empty : ".") + "unpacked";
+			if (fileName.EndsWith(".blz"))
+				fileName = fileName.Substring(0, fileName.Length - 4);
+			else
+				fileName += (fileName.EndsWith(".") ? string.Empty : ".") + "unpacked";
 
 			if (outBlazerStream != null && outBlazerStream.FileInfo != null && !opt.NoFileName)
-			{
 				fileName = outBlazerStream.FileInfo.FileName;
-			}
 
 			// nothing to do
 			if (!hasMultipleFiles && !customOutFileNames.Any(y => y.IsMatch(fileName)))
 				return 0;
 
-			if (opt.Stdout) outFile[0] = Console.OpenStandardOutput();
-			if (!hasMultipleFiles)
-				decOptions.FileInfoCallback(new BlazerFileInfo { FileName = fileName, CreationTimeUtc = DateTime.UtcNow, LastWriteTimeUtc = DateTime.UtcNow });
-			// we haven't received an file info from callback
-			// if (outFile[0] == null && !outBlazerStream.HaveMultipleFiles)
-			//	outFile[0] = new StatStream(new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
+			Stream consoleStream = null;
+			if (opt.Stdout)
+				consoleStream = Console.OpenStandardOutput();
 
-			using (var inFile = outStream)
-			{
-				var buf = new byte[81920];
-				int cnt = 1;
-				while (cnt > 0)
+			Action<BlazerFileInfo, StatStream> endCallback = (fInfo, s) =>
 				{
-					if (doExit)
-						break;
-					cnt = inFile.Read(buf, 0, buf.Length);
-					if (outFile[0] != null)
-						outFile[0].Write(buf, 0, cnt);
+					if (s != null)
+					{
+						s.Flush();
+						s.Close();
+						// no file info, using some fake data
+						if (fInfo == null)
+							fInfo = new BlazerFileInfo
+										{
+											FileName = fileName,
+											CreationTimeUtc = DateTime.UtcNow,
+											LastWriteTimeUtc = DateTime.UtcNow
+										};
+
+						fInfo.ApplyToFile();
+					}
+				};
+
+			Func<BlazerFileInfo, StatStream> startCallback = fInfo =>
+				{
+					if (opt.Stdout)
+						return new StatStream(consoleStream);
+
+					// no file info, using some fake data
+					if (fInfo == null)
+					{
+						fInfo = new BlazerFileInfo
+									{
+										FileName = fileName,
+										CreationTimeUtc = DateTime.UtcNow,
+										LastWriteTimeUtc = DateTime.UtcNow
+									};
+					}
+
+					var fInfoFileName = fInfo.FileName;
+					if (customOutFileNames != null && !customOutFileNames.Any(y => y.IsMatch(fInfoFileName)))
+						return null;
+
+					if (opt.NoPathName)
+						fInfoFileName = Path.GetFileName(fInfoFileName);
+
+					if (File.Exists(fInfoFileName))
+					{
+						if (forceAllSkip)
+						{
+							var sts = new StatStream(new NullStream(), true);
+							sts.Prefix = "Skipping " + fInfo.FileName + "  ";
+							return sts;
+						}
+
+						if (!opt.Force && !forceAllOverride)
+						{
+							// ReSharper disable AccessToModifiedClosure
+							Console.WriteLine();
+							Console.WriteLine(
+								"Target " + fInfoFileName + " already exists. Overwrite? (Y)es (N)o"
+								+ (hasMultipleFiles ? " (A)ll (S)kip all existing" : string.Empty));
+							// ReSharper restore AccessToModifiedClosure
+							var readLine = Console.ReadLine().Trim().ToLowerInvariant();
+
+							forceAllOverride = readLine.Trim().IndexOf("a", StringComparison.Ordinal) == 0;
+							forceAllSkip = readLine.Trim().IndexOf("s", StringComparison.Ordinal) == 0;
+							if (!forceAllOverride && readLine.Trim().IndexOf("y", StringComparison.Ordinal) != 0)
+							{
+								var sts = new StatStream(new NullStream(), true);
+								sts.Prefix = "Skipping " + fInfo.FileName + "  ";
+								return sts;
+							}
+						}
+
+						new FileStream(fInfoFileName, FileMode.Truncate, FileAccess.Write).Close();
+					}
+
+					var directoryName = Path.GetDirectoryName(fInfoFileName);
+					if (!string.IsNullOrEmpty(directoryName))
+						Directory.CreateDirectory(directoryName);
+
+					var statStream =
+						new StatStream(new FileStream(fInfoFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read), true);
+					Console.WriteLine();
+					statStream.Prefix = "Extracting " + fInfo.FileName + "  ";
+					return statStream;
+				};
+
+			if (outBlazerStream == null)
+			{
+				using (outStream)
+				{
+					var sts = startCallback(null);
+					outStream.CopyTo(sts);
+					endCallback(null, sts);
 				}
 			}
-
-			if (prevFile != null && outFile[0] != null)
+			else
 			{
-				outFile[0].Flush();
-				outFile[0].Close();
-				prevFile.ApplyToFile();
+				using (outBlazerStream)
+					BlazerFileHelper.ReadFilesFromStream(
+						outBlazerStream,
+						fInfo =>
+							{
+								if (opt.Stdout) return;
+
+								var fInfoFileName = fInfo.FileName;
+								if (customOutFileNames != null && !customOutFileNames.Any(y => y.IsMatch(fInfoFileName))) return;
+
+								if (!opt.NoPathName && !Directory.Exists(fInfoFileName)) Directory.CreateDirectory(fInfoFileName);
+							},
+						startCallback,
+						endCallback);
 			}
 
 			return 0;

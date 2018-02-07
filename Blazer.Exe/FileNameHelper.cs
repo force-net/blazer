@@ -65,6 +65,13 @@ namespace Force.Blazer.Exe
 				filesToCompress = opt.Stdin ? new string[0] : nonParamOptions.Skip(1).ToArray();
 
 				if (filesToCompress.Length == 0 && archiveName != null && !opt.Stdin) filesToCompress = new[] { archiveName };
+				if (!opt.Stdin)
+				{
+					/*if (filesToCompress.Length == 1 && Directory.Exists(filesToCompress[0]))
+						filesToCompress = Directory.GetFiles(filesToCompress[0], "*", SearchOption.AllDirectories);
+					else*/
+						filesToCompress = filesToCompress.SelectMany(x => Directory.Exists(x) ? Directory.GetFiles(x, "*", SearchOption.AllDirectories) : new[] { x }).ToArray();
+				}
 			}
 
 			bool hasMissingFiles;
